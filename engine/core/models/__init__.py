@@ -5,20 +5,67 @@ These models implement the RGPS protocols and represent the revolutionary
 concepts that make genealogical research version-controlled and theory-based.
 """
 
-from .identity import Identity, Persona
-from .evidence import Evidence, ExtractedFact, EvidenceClassification
-from .theory import Theory, TheoryBranch
-from .event import Event, EventParticipation
-from .relationship import Relationship, RelationshipParticipant
-from .location import Location, TemporalLocation
-from .confidence import ConfidenceContainer, ResearchCoverage
+from .base import BaseEntity
+from .confidence import (
+    ConfidenceContainer, ResearchCoverage, AuditCheckItem, 
+    GPSCompliance, PeerAssessment
+)
+from .identity import (
+    Identity, Persona, NameForm, BiologicalProfile, 
+    SocialIdentity, ExistenceStatus, NameType
+)
+from .evidence import (
+    Evidence, ExtractedFact, EvidenceClassification, EvidenceAnalysis,
+    Repository, Citation, NegativeEvidence, SourceType, RecordType, 
+    FactType, AnalysisType
+)
+from .theory import (
+    Theory, TheoryBranch, TheoryMetrics, ResearchGap, 
+    TheoryConflict, TheoryType
+)
+from .event import (
+    Event, EventParticipation, EventSequence, TemporalPoint,
+    EventCategory, EventType, ParticipantRole, DatePrecision
+)
+from .relationship import (
+    Relationship, RelationshipParticipant, RelationshipNetwork,
+    RelationshipCategory, RelationshipType, ParticipantRoleType
+)
+from .location import (
+    Location, TemporalLocation, PlaceName, Coordinates, 
+    Boundary, Jurisdiction, LocationType, JurisdictionType
+)
 
 __all__ = [
-    'Identity', 'Persona',
-    'Evidence', 'ExtractedFact', 'EvidenceClassification',
-    'Theory', 'TheoryBranch',
-    'Event', 'EventParticipation',
-    'Relationship', 'RelationshipParticipant',
-    'Location', 'TemporalLocation',
-    'ConfidenceContainer', 'ResearchCoverage'
+    # Base
+    'BaseEntity',
+    
+    # Confidence
+    'ConfidenceContainer', 'ResearchCoverage', 'AuditCheckItem',
+    'GPSCompliance', 'PeerAssessment',
+    
+    # Identity
+    'Identity', 'Persona', 'NameForm', 'BiologicalProfile',
+    'SocialIdentity', 'ExistenceStatus', 'NameType',
+    
+    # Evidence  
+    'Evidence', 'ExtractedFact', 'EvidenceClassification', 'EvidenceAnalysis',
+    'Repository', 'Citation', 'NegativeEvidence', 'SourceType', 'RecordType',
+    'FactType', 'AnalysisType',
+    
+    # Theory
+    'Theory', 'TheoryBranch', 'TheoryMetrics', 'ResearchGap',
+    'TheoryConflict', 'TheoryType',
+    
+    # Event
+    'Event', 'EventParticipation', 'EventSequence', 'TemporalPoint',
+    'EventCategory', 'EventType', 'ParticipantRole', 'DatePrecision',
+    
+    # Relationship
+    'Relationship', 'RelationshipParticipant', 'RelationshipNetwork',
+    'RelationshipCategory', 'RelationshipType', 'ParticipantRoleType',
+    
+    # Location
+    'Location', 'TemporalLocation', 'PlaceName', 'Coordinates',
+    'Boundary', 'Jurisdiction', 'LocationType', 'JurisdictionType'
 ]
