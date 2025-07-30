@@ -26,6 +26,11 @@ class NestingType(Enum):
     SPATIAL = "spatial"                # Space-based nesting
     LOGICAL = "logical"                # Logical grouping
     ADMINISTRATIVE = "administrative"  # Administrative hierarchy
+    RESEARCH = "research"              # Research-based organization
+    THEMATIC = "thematic"              # Theme-based grouping
+    WORKFLOW = "workflow"              # Process/workflow grouping
+    ARBITRARY = "arbitrary"            # User-defined grouping
+    MIXED = "mixed"                    # Mixed-type collection
 
 
 class NestableEntity(ABC, Generic[T]):
@@ -41,10 +46,15 @@ class NestableEntity(ABC, Generic[T]):
         self.nesting_type: NestingType = NestingType.HIERARCHICAL
         self.nesting_metadata: Dict[str, Any] = {}
         
-    @abstractmethod
     def can_contain(self, child: T) -> bool:
-        """Check if this entity can contain the given child"""
-        pass
+        """
+        Check if this entity can contain the given child.
+        By default, allows any nesting - override for specific restrictions.
+        """
+        # Permissive by default - only check for circular references
+        if hasattr(child, 'is_ancestor_of') and child.is_ancestor_of(self):
+            return False
+        return True
     
     @abstractmethod
     def validate_nesting(self) -> List[str]:
@@ -164,13 +174,18 @@ class NestableEntity(ABC, Generic[T]):
 
 @dataclass
 class NestingConstraints:
-    """Constraints on nesting behavior"""
-    max_depth: Optional[int] = None              # Maximum nesting depth
-    max_children: Optional[int] = None           # Maximum children per node
-    allowed_child_types: Set[str] = field(default_factory=set)
+    """
+    Constraints on nesting behavior.
+    By default, maximally permissive - override as needed.
+    """
+    max_depth: Optional[int] = None              # Maximum nesting depth (None = unlimited)
+    max_children: Optional[int] = None           # Maximum children per node (None = unlimited)
+    allowed_child_types: Set[str] = field(default_factory=set)  # Empty = allow all
     forbidden_child_types: Set[str] = field(default_factory=set)
-    circular_reference_allowed: bool = False
+    circular_reference_allowed: bool = False     # Safety default
     multiple_parents_allowed: bool = False       # For DAG structures
+    allow_mixed_types: bool = True              # Can contain different entity types
+    allow_external_references: bool = True       # Can reference entities outside hierarchy
 
 
 @dataclass
@@ -277,43 +292,214 @@ class NestableLocation:
 class CollectionEntity(NestableEntity[T]):
     """
     Special type of nestable entity that represents a collection.
-    Used for grouping related entities.
+    Used for grouping related entities in any way that makes sense to the researcher.
+    
+    Collections are maximally flexible:
+    - Can contain any entity type
+    - Can mix entity types
+    - Can have arbitrary metadata
+    - Can represent any organizational structure
     """
     
-    def __init__(self, name: str, collection_type: str):
+    def __init__(self, name: str, collection_type: str = "general", 
+                 description: str = "", purpose: str = ""):
         super().__init__()
         self.name = name
         self.collection_type = collection_type
-        self.nesting_type = NestingType.CATEGORICAL
+        self.description = description
+        self.purpose = purpose
+        self.nesting_type = NestingType.ARBITRARY
         self.metadata: Dict[str, Any] = {}
+        self.item_metadata: Dict[UUID, Dict[str, Any]] = {}  # Per-item metadata
+        self.tags: Set[str] = set()  # Flexible tagging
+        self.created_date = datetime.utcnow()
         
-    def add_item(self, item: T, metadata: Dict[str, Any] = None) -> bool:
-        """Add item to collection with optional metadata"""
+        # Maximally permissive constraints
+        self.constraints = NestingConstraints(
+            allow_mixed_types=True,
+            allow_external_references=True
+        )
+        
+    def add_item(self, item: Any, metadata: Dict[str, Any] = None, 
+                 tags: Set[str] = None, notes: str = "") -> bool:
+        """
+        Add any item to collection with optional metadata.
+        Accepts ANY object - maximally permissive.
+        """
         if self.add_child(item):
+            item_data = {
+                "added_date": datetime.utcnow(),
+                "notes": notes,
+                "entity_type": type(item).__name__
+            }
             if metadata:
-                self.metadata[item.id] = metadata
+                item_data.update(metadata)
+            self.item_metadata[item.id] = item_data
+            
+            if tags:
+                self.tags.update(tags)
+                item_data["tags"] = list(tags)
+            
             return True
         return False
     
-    def get_items_by_metadata(self, key: str, value: Any) -> List[T]:
+    def add_items(self, items: List[Any], common_metadata: Dict[str, Any] = None) -> int:
+        """Add multiple items at once"""
+        added = 0
+        for item in items:
+            if self.add_item(item, metadata=common_metadata):
+                added += 1
+        return added
+    
+    def get_items_by_metadata(self, key: str, value: Any) -> List[Any]:
         """Get items that have specific metadata"""
         results = []
         for child in self.children:
-            child_metadata = self.metadata.get(child.id, {})
+            child_metadata = self.item_metadata.get(child.id, {})
             if child_metadata.get(key) == value:
                 results.append(child)
         return results
     
-    def organize_by_metadata(self, key: str) -> Dict[Any, List[T]]:
+    def get_items_by_type(self, entity_type: Type) -> List[Any]:
+        """Get all items of a specific type"""
+        return [child for child in self.children if isinstance(child, entity_type)]
+    
+    def get_items_by_tag(self, tag: str) -> List[Any]:
+        """Get items that have a specific tag"""
+        results = []
+        for child in self.children:
+            child_tags = self.item_metadata.get(child.id, {}).get("tags", [])
+            if tag in child_tags:
+                results.append(child)
+        return results
+    
+    def organize_by_metadata(self, key: str) -> Dict[Any, List[Any]]:
         """Organize collection items by metadata key"""
         organized = {}
         for child in self.children:
-            child_metadata = self.metadata.get(child.id, {})
+            child_metadata = self.item_metadata.get(child.id, {})
             value = child_metadata.get(key, "Unknown")
             if value not in organized:
                 organized[value] = []
             organized[value].append(child)
         return organized
+    
+    def organize_by_type(self) -> Dict[str, List[Any]]:
+        """Organize collection by entity type"""
+        organized = {}
+        for child in self.children:
+            entity_type = type(child).__name__
+            if entity_type not in organized:
+                organized[entity_type] = []
+            organized[entity_type].append(child)
+        return organized
+    
+    def filter_items(self, condition: callable) -> List[Any]:
+        """Filter items by arbitrary condition"""
+        return [child for child in self.children if condition(child)]
+    
+    def apply_to_all(self, operation: callable) -> None:
+        """Apply an operation to all items in collection"""
+        for child in self.children:
+            operation(child)
+    
+    def create_subcollection(self, name: str, condition: callable) -> 'CollectionEntity':
+        """Create a subcollection based on a condition"""
+        subcollection = CollectionEntity(
+            name=name,
+            collection_type=f"subset_of_{self.name}",
+            description=f"Subset of {self.name}"
+        )
+        
+        for child in self.children:
+            if condition(child):
+                child_metadata = self.item_metadata.get(child.id, {})
+                subcollection.add_item(child, metadata=child_metadata.copy())
+        
+        return subcollection
+
+
+@dataclass
+class UniversalCollection(CollectionEntity):
+    """
+    The most flexible collection type - can contain literally anything.
+    No restrictions whatsoever on what can be grouped together.
+    """
+    
+    def __init__(self, name: str, researcher_notes: str = ""):
+        super().__init__(
+            name=name,
+            collection_type="universal",
+            description="Unrestricted collection",
+            purpose=researcher_notes
+        )
+        self.nesting_type = NestingType.ARBITRARY
+        
+    def can_contain(self, child: Any) -> bool:
+        """Universal collections can contain anything"""
+        return True
+
+
+@dataclass 
+class ResearchCollection(CollectionEntity):
+    """Collection specifically for research organization"""
+    
+    def __init__(self, research_topic: str, research_question_id: Optional[UUID] = None):
+        super().__init__(
+            name=f"Research: {research_topic}",
+            collection_type="research",
+            description=f"Research materials for {research_topic}"
+        )
+        self.research_topic = research_topic
+        self.research_question_id = research_question_id
+        self.nesting_type = NestingType.RESEARCH
+
+
+@dataclass
+class TemporalCollection(CollectionEntity):
+    """Collection organized by time period"""
+    
+    def __init__(self, time_period: str, start_year: Optional[int] = None, 
+                 end_year: Optional[int] = None):
+        super().__init__(
+            name=f"Period: {time_period}",
+            collection_type="temporal",
+            description=f"Items from {time_period}"
+        )
+        self.time_period = time_period
+        self.start_year = start_year
+        self.end_year = end_year
+        self.nesting_type = NestingType.TEMPORAL
+
+
+@dataclass
+class GeographicCollection(CollectionEntity):
+    """Collection organized by location/geography"""
+    
+    def __init__(self, location_name: str, location_id: Optional[UUID] = None):
+        super().__init__(
+            name=f"Location: {location_name}",
+            collection_type="geographic",
+            description=f"Items related to {location_name}"
+        )
+        self.location_name = location_name
+        self.location_id = location_id
+        self.nesting_type = NestingType.SPATIAL
+
+
+@dataclass
+class WorkflowCollection(CollectionEntity):
+    """Collection for organizing workflow/process items"""
+    
+    def __init__(self, workflow_name: str, stage: str = ""):
+        super().__init__(
+            name=f"Workflow: {workflow_name}",
+            collection_type="workflow",
+            description=f"Items in {workflow_name} workflow"
+        )
+        self.workflow_name = workflow_name
+        self.stage = stage
+        self.nesting_type = NestingType.WORKFLOW
 
 
 class NestingAnalyzer:

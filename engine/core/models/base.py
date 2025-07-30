@@ -4,7 +4,7 @@ All domain models inherit from these base classes.
 """
 
 from abc import ABC
-from typing import Dict, List, Optional, Any, Set
+from typing import Dict, List, Optional, Any, Set, TypeVar, Generic
 from datetime import datetime
 from uuid import UUID, uuid4
 from dataclasses import dataclass, field
@@ -13,6 +13,7 @@ from ...protocols.entity_protocol import (
     EntityProtocol, PublicationState, Version, Attribution,
     ConfidenceContainer
 )
+from ..abstractions.nesting import NestableEntity, NestingType, NestingConstraints
 
 
 @dataclass
@@ -252,5 +253,126 @@ class BaseEntity(EntityProtocol):
         
         instance.privacy_level = data.get("privacy_level", "private")
         instance.encryption_key_id = data.get("encryption_key_id")
+        
+        return instance
+
+
+T = TypeVar('T', bound='NestableBaseEntity')
+
+
+@dataclass
+class NestableBaseEntity(BaseEntity, NestableEntity[T]):
+    """
+    Base class for all RGPS entities that support nesting.
+    Combines protocol compliance with nesting capabilities.
+    
+    This is the new default base class - ALL entities should inherit from this
+    to support maximum organizational flexibility.
+    """
+    
+    def __init__(self, **kwargs):
+        BaseEntity.__init__(self, **kwargs)
+        NestableEntity.__init__(self)
+        
+        # Set permissive defaults
+        self.nesting_type = NestingType.ARBITRARY
+        self.constraints = NestingConstraints(
+            max_depth=None,  # No limit
+            max_children=None,  # No limit
+            allow_mixed_types=True,  # Can nest any type
+            circular_reference_allowed=False,  # Safety only
+            allow_external_references=True
+        )
+    
+    def __post_init__(self):
+        """Initialize both base classes properly"""
+        super().__post_init__()  # BaseEntity post_init
+        NestableEntity.__init__(self)  # Initialize nesting
+        
+        # Set permissive defaults after initialization
+        self.nesting_type = NestingType.ARBITRARY
+        self.constraints = NestingConstraints(
+            max_depth=None,
+            max_children=None,
+            allow_mixed_types=True,
+            circular_reference_allowed=False,
+            allow_external_references=True
+        )
+    
+    def validate_nesting(self) -> List[str]:
+        """
+        Validate nesting structure.
+        By default, very permissive - only check for circular references.
+        """
+        issues = []
+        
+        # Check for circular references (safety)
+        if not self.constraints.circular_reference_allowed:
+            ancestors = self.get_ancestors()
+            if self in ancestors:
+                issues.append("Circular reference detected")
+        
+        # Let subclasses add their own validation
+        return issues
+    
+    def add_related(self, entity: Any, relationship_type: str = "related", 
+                    metadata: Dict[str, Any] = None) -> bool:
+        """
+        Add any related entity with semantic relationship.
+        More semantic than just add_child.
+        """
+        if self.add_child(entity):
+            self.nesting_metadata[entity.id] = {
+                "relationship_type": relationship_type,
+                "added_date": datetime.utcnow(),
+                "metadata": metadata or {}
+            }
+            return True
+        return False
+    
+    def get_related(self, relationship_type: str = None) -> List[Any]:
+        """Get related entities, optionally filtered by relationship type"""
+        if relationship_type is None:
+            return self.children
+        
+        return [
+            child for child in self.children
+            if self.nesting_metadata.get(child.id, {}).get("relationship_type") == relationship_type
+        ]
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize including nesting information"""
+        data = super().to_dict()
+        
+        # Add nesting information
+        data["nesting"] = {
+            "parent_id": str(self.parent_id) if self.parent_id else None,
+            "children": [str(child.id) for child in self.children],
+            "nesting_type": self.nesting_type.value,
+            "nesting_metadata": self.nesting_metadata,
+            "constraints": {
+                "max_depth": self.constraints.max_depth,
+                "max_children": self.constraints.max_children,
+                "allow_mixed_types": self.constraints.allow_mixed_types,
+                "circular_reference_allowed": self.constraints.circular_reference_allowed,
+                "allow_external_references": self.constraints.allow_external_references
+            }
+        }
+        
+        return data
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'NestableBaseEntity':
+        """Deserialize including nesting information"""
+        instance = super().from_dict(data)
+        
+        # Restore nesting information
+        nesting_data = data.get("nesting", {})
+        instance.parent_id = UUID(nesting_data["parent_id"]) if nesting_data.get("parent_id") else None
+        instance.nesting_type = NestingType(nesting_data.get("nesting_type", "arbitrary"))
+        instance.nesting_metadata = nesting_data.get("nesting_metadata", {})
+        
+        # Note: children would need to be restored by the storage layer
+        # since we only store IDs here
         
         return instance

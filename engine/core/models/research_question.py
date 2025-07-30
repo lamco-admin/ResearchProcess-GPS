@@ -11,8 +11,9 @@ from datetime import datetime
 from uuid import UUID, uuid4
 from enum import Enum
 
-from .base import BaseEntity
+from .base import NestableBaseEntity
 from .confidence import ConfidenceContainer, GPSCompliance
+from ..abstractions.nesting import NestingType
 
 
 class ResearchQuestionType(Enum):
@@ -164,16 +165,20 @@ class WorkingHypothesis:
 
 
 @dataclass
-class ResearchQuestion(BaseEntity):
+class ResearchQuestion(NestableBaseEntity['ResearchQuestion']):
     """
     A Research Question drives genealogical research. It represents what
     we're trying to find out, tracks our progress, and eventually reaches
     a conclusion.
+    
+    Research questions naturally nest - complex questions break down into
+    sub-questions, forming a research hierarchy.
     """
     
     def __post_init__(self):
         super().__post_init__()
         self.type = "ResearchQuestion"
+        self.nesting_type = NestingType.HIERARCHICAL  # Questions form hierarchies
     
     # The question
     question: str = ""                 # "Who were John Smith's parents?"
@@ -190,10 +195,8 @@ class ResearchQuestion(BaseEntity):
     geographic_scope: List[UUID] = field(default_factory=list)  # Locations
     temporal_scope: Tuple[Optional[int], Optional[int]] = (None, None)
     
-    # Related questions
-    parent_question: Optional[UUID] = None
-    sub_questions: List[UUID] = field(default_factory=list)
-    related_questions: List[UUID] = field(default_factory=list)
+    # Related questions (beyond parent/child which is handled by nesting)
+    related_questions: List[UUID] = field(default_factory=list)  # Lateral relationships
     
     # Research plan
     research_plan: Optional[ResearchPlan] = None
@@ -234,12 +237,21 @@ class ResearchQuestion(BaseEntity):
             self.active_hypothesis = hypothesis.hypothesis_id
         return hypothesis
     
-    def add_sub_question(self, question: str, question_type: ResearchQuestionType) -> UUID:
+    def add_sub_question(self, question: str, question_type: ResearchQuestionType) -> 'ResearchQuestion':
         """Add a sub-question"""
-        # In real implementation, would create new ResearchQuestion
-        sub_id = uuid4()
-        self.sub_questions.append(sub_id)
-        return sub_id
+        sub_question = ResearchQuestion()
+        sub_question.question = question
+        sub_question.question_type = question_type
+        sub_question.scope = self.scope  # Inherit scope by default
+        
+        # Add as child using nesting
+        self.add_child(sub_question)
+        self.nesting_metadata[sub_question.id] = {
+            "order": len(self.children),
+            "created_date": datetime.utcnow()
+        }
+        
+        return sub_question
     
     def update_status(self, new_status: ResearchQuestionStatus, notes: str = "") -> None:
         """Update the status with history tracking"""
@@ -272,6 +284,31 @@ class ResearchQuestion(BaseEntity):
             issues.append("No peer review completed")
         
         return len(issues) == 0, issues
+    
+    def get_sub_questions(self) -> List['ResearchQuestion']:
+        """Get all direct sub-questions"""
+        return [child for child in self.children if isinstance(child, ResearchQuestion)]
+    
+    def get_all_sub_questions(self) -> List['ResearchQuestion']:
+        """Get all sub-questions recursively"""
+        return [child for child in self.get_children(recursive=True) 
+                if isinstance(child, ResearchQuestion)]
+    
+    def is_compound_question(self) -> bool:
+        """Check if this question has sub-questions"""
+        return len(self.get_sub_questions()) > 0
+    
+    def get_unanswered_questions(self) -> List['ResearchQuestion']:
+        """Get all unanswered questions in the hierarchy"""
+        unanswered = []
+        if self.status not in [ResearchQuestionStatus.CONCLUDED, ResearchQuestionStatus.ABANDONED]:
+            unanswered.append(self)
+        
+        for sub in self.get_all_sub_questions():
+            if sub.status not in [ResearchQuestionStatus.CONCLUDED, ResearchQuestionStatus.ABANDONED]:
+                unanswered.append(sub)
+        
+        return unanswered
 
 
 @dataclass

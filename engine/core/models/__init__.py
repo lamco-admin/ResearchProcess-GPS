@@ -39,6 +39,10 @@ from .location import (
     Location, TemporalLocation, PlaceName, Coordinates, 
     Boundary, Jurisdiction, LocationType, JurisdictionType
 )
+from .theory import (
+    Theory, TheoryType, TheoryMetrics,
+    ResearchGap, TheoryConflict, TheoryBranch
+)
 
 __all__ = [
     # Base
@@ -75,5 +79,9 @@ __all__ = [
     
     # Location
     'Location', 'TemporalLocation', 'PlaceName', 'Coordinates',
-    'Boundary', 'Jurisdiction', 'LocationType', 'JurisdictionType'
+    'Boundary', 'Jurisdiction', 'LocationType', 'JurisdictionType',
+    
+    # Theory
+    'Theory', 'TheoryType', 'TheoryMetrics',
+    'ResearchGap', 'TheoryConflict', 'TheoryBranch'
 ]

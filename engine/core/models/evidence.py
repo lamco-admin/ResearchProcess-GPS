@@ -11,7 +11,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 from enum import Enum
 
-from .base import BaseEntity
+from .base import NestableBaseEntity
 from .confidence import (
     ConfidenceContainer, EvidenceQuality, InformationType, EvidenceType
 )
@@ -78,11 +78,24 @@ class AnalysisType(Enum):
 
 
 @dataclass
-class Repository:
-    """Where evidence is held"""
-    repository_id: UUID = field(default_factory=uuid4)
+class Repository(NestableBaseEntity['Repository']):
+    """
+    Where evidence is held.
+    
+    Now supports nesting for:
+    - Repository hierarchies (National Archives → Branch → Collection)
+    - Virtual repositories containing sub-repositories
+    - Collection organization within repositories
+    """
+    
+    def __post_init__(self):
+        super().__post_init__()
+        self.type = "Repository"
+        from ..abstractions.nesting import NestingType
+        self.nesting_type = NestingType.HIERARCHICAL
+    
     name: str = ""
-    type: str = ""  # "archive", "library", "online", "private"
+    repository_type: str = ""  # "archive", "library", "online", "private"
     location: Optional[UUID] = None  # Reference to Location
     contact_info: Dict[str, str] = field(default_factory=dict)
     access_info: Dict[str, str] = field(default_factory=dict)
@@ -195,15 +208,23 @@ class EvidenceClassification:
 
 
 @dataclass
-class Evidence(BaseEntity):
+class Evidence(NestableBaseEntity['Evidence']):
     """
     Evidence is a first-class entity in ResearchProcess-GPS.
     It can float between theories and be interpreted differently in each.
+    
+    Now supports nesting for:
+    - Document bundles (multiple pages/items from same source)
+    - Evidence collections (related evidence grouped for analysis)
+    - Derivative evidence (evidence derived from other evidence)
+    - Evidence hierarchies (original → transcription → translation)
     """
     
     def __post_init__(self):
         super().__post_init__()
         self.type = "Evidence"
+        from ..abstractions.nesting import NestingType
+        self.nesting_type = NestingType.COMPOSITIONAL  # Evidence bundles
     
     # Classification
     classification: EvidenceClassification = field(default_factory=EvidenceClassification)

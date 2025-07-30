@@ -1,4 +1,36 @@
-# Python
+# Rust build artifacts
+/target/
+**/*.rs.bk
+*.pdb
+debug/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+*.iml
+
+# Environment files
+.env
+.env.*
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+db.sqlite3
+db.sqlite3-journal
+
+# Log files
+*.log
+
+# OS files
+Thumbs.db
+
+# Python artifacts (from previous implementation)
 __pycache__/
 *.py[cod]
 *$py.class
@@ -27,34 +59,21 @@ env/
 ENV/
 .venv/
 
-# Django
-*.log
+# Django (from previous implementation)
 local_settings.py
-db.sqlite3
-db.sqlite3-journal
 media/
 staticfiles/
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-
-# Environment variables
-.env
-.env.local
-.env.*.local
-
-# Sensitive data
-*.pem
-*.key
-secrets/
-private/
+# Documentation build
+/docs/_build/
+/docs/.doctrees/
+docs/_static/
+docs/_templates/
 
 # Test coverage
+/coverage/
+*.lcov
+/tarpaulin-report.html
 htmlcov/
 .coverage
 .coverage.*
@@ -64,15 +83,17 @@ nosetests.xml
 coverage.xml
 *.cover
 
-# Documentation builds
-docs/_build/
-docs/_static/
-docs/_templates/
-
 # Temporary files
+/tmp/
 *.tmp
 *.bak
 .~*
+
+# Sensitive data
+*.pem
+*.key
+secrets/
+private/
 
 # Research data (privacy)
 data/living/
@@ -82,3 +103,7 @@ data/restricted/
 # Local development
 local/
 scratch/
+
+# Local configuration
+/config/local/
+*.local.*

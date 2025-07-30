@@ -12,8 +12,10 @@ from datetime import datetime, date, timedelta
 from uuid import UUID, uuid4
 from enum import Enum
 
-from .base import BaseEntity
+from .base import NestableBaseEntity
 from .confidence import ConfidenceContainer
+from ..abstractions.nesting import NestingType
+from ..abstractions.temporal import TemporalPoint
 
 
 class EventCategory(Enum):
@@ -207,16 +209,20 @@ class EventParticipation:
 
 
 @dataclass
-class Event(BaseEntity):
+class Event(NestableBaseEntity['Event']):
     """
     An Event in ResearchProcess-GPS is independent - not owned by any person or family.
     Multiple people can participate in various roles, and the same event can be
     interpreted differently in different theories.
+    
+    Events can nest to represent complex occurrences - wars contain battles,
+    migrations contain stops, conferences contain sessions, etc.
     """
     
     def __post_init__(self):
         super().__post_init__()
         self.type = "Event"
+        self.nesting_type = NestingType.COMPOSITIONAL  # Events compose into larger events
     
     # Event classification
     category: EventCategory = EventCategory.OTHER
@@ -379,6 +385,91 @@ class Event(BaseEntity):
                     })
         
         return facts
+    
+    # Nesting-specific methods for events
+    
+    def add_sub_event(self, event: 'Event', relationship: str = "part_of") -> bool:
+        """Add a sub-event that is part of this larger event"""
+        if self.add_child(event):
+            self.nesting_metadata[event.id] = {
+                "relationship": relationship,
+                "added_date": datetime.utcnow()
+            }
+            # Inherit some properties
+            if not event.location_id and self.location_id:
+                event.location_id = self.location_id
+            return True
+        return False
+    
+    def get_sub_events(self) -> List['Event']:
+        """Get all direct sub-events"""
+        return [child for child in self.children if isinstance(child, Event)]
+    
+    def get_all_sub_events(self) -> List['Event']:
+        """Get all sub-events recursively"""
+        return [child for child in self.get_children(recursive=True) 
+                if isinstance(child, Event)]
+    
+    def get_sub_events_by_type(self, event_type: EventType) -> List['Event']:
+        """Get sub-events of a specific type"""
+        return [event for event in self.get_all_sub_events() 
+                if event.event_type == event_type]
+    
+    def get_sub_events_in_timeframe(self, start_date: date, end_date: date) -> List['Event']:
+        """Get sub-events within a specific timeframe"""
+        sub_events = []
+        for event in self.get_all_sub_events():
+            if event.temporal_data and event.temporal_data.date_value:
+                if start_date <= event.temporal_data.date_value <= end_date:
+                    sub_events.append(event)
+        return sub_events
+    
+    def create_event_sequence(self) -> List['Event']:
+        """Create a chronological sequence of this event and its sub-events"""
+        all_events = [self] + self.get_all_sub_events()
+        
+        # Sort by date
+        def get_event_date(event):
+            if event.temporal_data and event.temporal_data.date_value:
+                return event.temporal_data.date_value
+            return date.min
+        
+        all_events.sort(key=get_event_date)
+        return all_events
+    
+    def get_participant_journey(self, identity_id: UUID) -> List['Event']:
+        """Get all events and sub-events involving a specific participant"""
+        journey = []
+        
+        # Check this event
+        for participation in self.participations:
+            if participation.identity_id == identity_id:
+                journey.append(self)
+                break
+        
+        # Check sub-events
+        for event in self.get_all_sub_events():
+            for participation in event.participations:
+                if participation.identity_id == identity_id:
+                    journey.append(event)
+                    break
+        
+        return journey
+    
+    def can_contain(self, child: Any) -> bool:
+        """
+        Determine if this event can contain another.
+        Permissive by default - researchers decide what makes sense.
+        """
+        # Allow any nesting (permissive)
+        if not isinstance(child, Event):
+            return True  # Can contain non-event entities too
+        
+        # Just prevent circular references
+        if hasattr(child, 'is_ancestor_of') and child.is_ancestor_of(self):
+            return False
+        
+        return True
 
 
 @dataclass

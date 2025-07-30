@@ -11,8 +11,9 @@ from datetime import datetime, date
 from uuid import UUID, uuid4
 from enum import Enum
 
-from .base import BaseEntity
+from .base import NestableBaseEntity
 from .confidence import ConfidenceContainer
+from ..abstractions.nesting import NestingType
 
 
 class LocationType(Enum):
@@ -215,16 +216,21 @@ class TemporalLocation:
 
 
 @dataclass
-class Location(BaseEntity):
+class Location(NestableBaseEntity['Location']):
     """
     A Location in ResearchProcess-GPS understands that places change over time.
     The same physical location might have different names, jurisdictions, and
     boundaries at different points in history.
+    
+    Locations naturally nest spatially - countries contain states, states contain
+    counties, etc. The nesting can represent administrative, geographic, or
+    conceptual hierarchies.
     """
     
     def __post_init__(self):
         super().__post_init__()
         self.type = "Location"
+        self.nesting_type = NestingType.SPATIAL  # Spatial hierarchy by default
     
     # Location classification
     location_type: LocationType = LocationType.UNKNOWN
@@ -245,9 +251,8 @@ class Location(BaseEntity):
     # Jurisdictional history
     jurisdictions: List[Jurisdiction] = field(default_factory=list)
     
-    # Parent/child locations
-    parent_location: Optional[UUID] = None  # e.g., city -> county
-    child_locations: List[UUID] = field(default_factory=list)  # e.g., county -> cities
+    # Location relationships beyond spatial hierarchy handled by nesting
+    related_locations: List[UUID] = field(default_factory=list)  # Non-hierarchical relationships
     
     # Temporal snapshots
     temporal_snapshots: Dict[date, TemporalLocation] = field(default_factory=dict)
@@ -414,3 +419,86 @@ class Location(BaseEntity):
                     parts.append(jurisdiction.name)
         
         return ", ".join(parts)
+    
+    # Nesting-specific methods for locations
+    
+    def add_contained_location(self, location: 'Location', 
+                              relationship: str = "contains") -> bool:
+        """Add a location that is contained within this one"""
+        if self.add_child(location):
+            self.nesting_metadata[location.id] = {
+                "relationship": relationship,
+                "added_date": datetime.utcnow()
+            }
+            return True
+        return False
+    
+    def get_contained_locations(self, location_type: Optional[LocationType] = None) -> List['Location']:
+        """Get all locations contained within this one"""
+        contained = [child for child in self.children if isinstance(child, Location)]
+        
+        if location_type:
+            contained = [loc for loc in contained if loc.location_type == location_type]
+        
+        return contained
+    
+    def get_containing_location(self) -> Optional['Location']:
+        """Get the location that contains this one"""
+        parent = self.get_parent()
+        if parent and isinstance(parent, Location):
+            return parent
+        return None
+    
+    def get_location_hierarchy(self) -> List['Location']:
+        """Get full hierarchy from this location up to country/top level"""
+        hierarchy = [self]
+        current = self.get_containing_location()
+        
+        while current:
+            hierarchy.append(current)
+            current = current.get_containing_location()
+        
+        return hierarchy
+    
+    def get_all_contained_locations(self) -> List['Location']:
+        """Get all locations contained within this one, recursively"""
+        return [child for child in self.get_children(recursive=True) 
+                if isinstance(child, Location)]
+    
+    def find_contained_by_name(self, name: str, check_date: Optional[date] = None) -> List['Location']:
+        """Find all contained locations matching a name"""
+        matches = []
+        
+        for location in self.get_all_contained_locations():
+            if check_date:
+                if location.get_name_on_date(check_date) == name:
+                    matches.append(location)
+            else:
+                if location.current_name == name:
+                    matches.append(location)
+                # Also check historical names
+                for place_name in location.place_names:
+                    if place_name.name == name:
+                        matches.append(location)
+                        break
+        
+        return matches
+    
+    def can_contain(self, child: Any) -> bool:
+        """
+        Determine if this location can contain another.
+        Overrides base to add location-specific logic.
+        """
+        # Allow any nesting by default (permissive)
+        if not isinstance(child, Location):
+            return True  # Can contain non-location entities too
+        
+        # Optional: Add hierarchy rules if desired
+        # For example, a city shouldn't contain a country
+        # But we keep it permissive - researchers might have reasons
+        
+        # Just prevent circular references
+        if hasattr(child, 'is_ancestor_of') and child.is_ancestor_of(self):
+            return False
+        
+        return True

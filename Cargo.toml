@@ -1,0 +1,67 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/rp-core",
+    "crates/rp-protocol", 
+    "crates/rp-engine",
+    "crates/rp-storage",
+    "crates/rp-storage-postgres",
+    "crates/rp-storage-git",
+    "crates/rp-storage-fs",
+    "crates/rp-network",
+    "crates/rp-modules",
+    "crates/rp-server",
+    "crates/rp-client", 
+    "crates/rp-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+authors = ["Greg Lamberson <greg@researchprocess-gps.org>"]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/yourusername/researchprocess-gps"
+rust-version = "1.75"
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1.40", features = ["full"] }
+async-trait = "0.1"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bincode = "1.3"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "sqlite", "uuid", "chrono", "json"] }
+
+# IDs and time
+uuid = { version = "1.10", features = ["v7", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# Validation
+validator = { version = "0.18", features = ["derive"] }
+
+# Testing
+proptest = "1.5"
+quickcheck = "1.0"
+
+[profile.dev]
+opt-level = 0
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[profile.bench]
+inherits = "release"

@@ -11,8 +11,9 @@ from datetime import datetime, date
 from uuid import UUID, uuid4
 from enum import Enum
 
-from .base import BaseEntity
+from .base import NestableBaseEntity
 from .confidence import ConfidenceContainer
+from ..abstractions.nesting import NestingType
 
 
 class RelationshipCategory(Enum):
@@ -162,11 +163,23 @@ class RelationshipParticipant:
         return True
 
 
+class RelationshipStatus(Enum):
+    """Status of a relationship - theoretical vs concluded"""
+    THEORETICAL = "theoretical"      # Research phase, uncertain
+    PROBABLE = "probable"            # High confidence but not concluded
+    CONCLUDED = "concluded"          # GPS-compliant, ready for persons
+    DISPROVEN = "disproven"          # Researched and found false
+
+
 @dataclass
-class Relationship(BaseEntity):
+class Relationship(NestableBaseEntity['Relationship']):
     """
-    A Relationship in ResearchProcess-GPS can involve multiple participants
-    in various roles. This is far more flexible than traditional family structures.
+    A Relationship in ResearchProcess-GPS represents connections between identities.
+    
+    IMPORTANT: Relationships are for actual human connections (biological, legal, social).
+    They are NOT for organizational nesting (use collections for that).
+    
+    Can be theoretical (during research) or concluded (for persons).
     
     Examples:
     - Marriage: 2+ participants as spouses
@@ -174,16 +187,27 @@ class Relationship(BaseEntity):
     - Household: All members with various roles
     - Business: Multiple partners
     - Blended family: Complex step-relationships
+    
+    Note: Relationships CAN nest to represent complex social structures,
+    but this is different from using nesting to imply the relationship itself.
     """
     
     def __post_init__(self):
         super().__post_init__()
         self.type = "Relationship"
+        # Relationships can nest for complex social structures
+        self.nesting_type = NestingType.LOGICAL
     
     # Relationship classification
     category: RelationshipCategory = RelationshipCategory.OTHER
     relationship_type: RelationshipType = RelationshipType.UNKNOWN
     custom_type: str = ""  # For non-standard relationships
+    
+    # Research status
+    status: RelationshipStatus = RelationshipStatus.THEORETICAL
+    
+    # Relationship subtype for nuanced distinctions
+    subtype: str = ""  # e.g., "biological_confirmed", "adoptive_legal", "foster_temporary"
     
     # Description
     title: str = ""  # "Smith-Jones Marriage", "Johnson Household 1850"

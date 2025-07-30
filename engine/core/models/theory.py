@@ -11,7 +11,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 from enum import Enum
 
-from .base import BaseEntity
+from .base import NestableBaseEntity
 from .confidence import ConfidenceContainer
 from ...protocols.theory_protocol import TheoryState, TheoryComparison
 
@@ -63,16 +63,24 @@ class TheoryConflict:
 
 
 @dataclass
-class Theory(BaseEntity):
+class Theory(NestableBaseEntity['Theory']):
     """
     A Theory is a container for a specific interpretation of genealogical data.
     It's like a Git branch - you can create multiple theories, test hypotheses,
     and merge the results back together.
+    
+    Now supports nesting for:
+    - Theory hierarchies (main theory → sub-theories → experiments)
+    - Theory evolution (v1 → v2 → v3)
+    - Collaborative theories (combining multiple researchers' work)
+    - Theory archives (historical theory development)
     """
     
     def __post_init__(self):
         super().__post_init__()
         self.type = "Theory"
+        from ..abstractions.nesting import NestingType
+        self.nesting_type = NestingType.VERSIONED  # Theories evolve over time
     
     # Core theory properties
     hypothesis: str = ""

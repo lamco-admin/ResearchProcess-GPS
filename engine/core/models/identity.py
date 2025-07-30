@@ -1,9 +1,20 @@
 """
 Identity and Persona models for ResearchProcess-GPS.
 
-Identity represents a potentially real person, while Personas are
-different interpretations or aspects of that identity across theories.
-This separation is key to theory-based research.
+==============================================================================
+DEPRECATED: This theory-based Identity model is deprecated in favor of the 
+evidence-based IdentityPersona model in identity_persona.py.
+
+The new model better reflects real genealogical research where:
+- Each evidence reference creates an IdentityPersona
+- These can be nested/grouped when possibly the same person
+- They can be promoted to Person status when research concludes
+- They can be demoted back if new evidence emerges
+
+Please use identity_persona.py for all new development.
+==============================================================================
+
+Original theory-based approach kept for historical reference only.
 """
 
 from dataclasses import dataclass, field

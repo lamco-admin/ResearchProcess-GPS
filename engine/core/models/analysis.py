@@ -12,7 +12,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 from enum import Enum
 
-from .base import BaseEntity
+from .base import NestableBaseEntity
 from .confidence import ConfidenceContainer
 
 
@@ -138,15 +138,23 @@ class ConflictResolution:
 
 
 @dataclass
-class Analysis(BaseEntity):
+class Analysis(NestableBaseEntity['Analysis']):
     """
     Analysis is the intellectual work of genealogical research.
     It documents how we interpret evidence and reach conclusions.
+    
+    Now supports nesting for:
+    - Multi-phase analysis (initial → detailed → final)
+    - Analytical hierarchies (main analysis → sub-analyses)
+    - Analysis revisions (original → revision 1 → revision 2)
+    - Collaborative analysis (multiple analysts' work combined)
     """
     
     def __post_init__(self):
         super().__post_init__()
         self.type = "Analysis"
+        from ..abstractions.nesting import NestingType
+        self.nesting_type = NestingType.PROGRESSIVE  # Analysis builds on itself
     
     # Basic properties
     title: str = ""
