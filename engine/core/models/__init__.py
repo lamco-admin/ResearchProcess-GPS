@@ -19,9 +19,13 @@ from .evidence import (
     Repository, Citation, NegativeEvidence, SourceType, RecordType, 
     FactType, AnalysisType
 )
-from .theory import (
-    Theory, TheoryBranch, TheoryMetrics, ResearchGap, 
-    TheoryConflict, TheoryType
+from .research_question import (
+    ResearchQuestion, WorkingHypothesis, ResearchPlan, Conclusion,
+    ResearchQuestionType, ResearchQuestionStatus, ResearchScope
+)
+from .analysis import (
+    Analysis, AnalyticalPoint, CorrelationSet, ConflictResolution,
+    AnalysisFramework, AnalysisType, AnalysisMethodology, ArgumentStrength
 )
 from .event import (
     Event, EventParticipation, EventSequence, TemporalPoint,
@@ -53,9 +57,13 @@ __all__ = [
     'Repository', 'Citation', 'NegativeEvidence', 'SourceType', 'RecordType',
     'FactType', 'AnalysisType',
     
-    # Theory
-    'Theory', 'TheoryBranch', 'TheoryMetrics', 'ResearchGap',
-    'TheoryConflict', 'TheoryType',
+    # Research Question
+    'ResearchQuestion', 'WorkingHypothesis', 'ResearchPlan', 'Conclusion',
+    'ResearchQuestionType', 'ResearchQuestionStatus', 'ResearchScope',
+    
+    # Analysis
+    'Analysis', 'AnalyticalPoint', 'CorrelationSet', 'ConflictResolution',
+    'AnalysisFramework', 'AnalysisType', 'AnalysisMethodology', 'ArgumentStrength',
     
     # Event
     'Event', 'EventParticipation', 'EventSequence', 'TemporalPoint',
