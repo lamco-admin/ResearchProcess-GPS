@@ -1,16 +1,13 @@
 //! PostgreSQL storage backend implementation
 
 use async_trait::async_trait;
-use sqlx::postgres::PgPool;
 use tracing::{debug, info, instrument};
-use uuid::Uuid;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use std::collections::HashMap;
 
 use rp_storage::{
     StorageBackend, StorageCapabilities, StorageResult, StorageError,
     QueryCapabilities, CompressionSupport, HealthStatus,
-    Transaction as StorageTrait,
 };
 
 use crate::{
@@ -168,6 +165,22 @@ impl StorageBackend for PostgresBackend {
         info!("Shutting down PostgreSQL backend");
         self.pool.close().await;
         Ok(())
+    }
+}
+
+// Implement DynStorageBackend for the factory pattern
+#[async_trait]
+impl rp_storage::DynStorageBackend for PostgresBackend {
+    async fn initialize(&self) -> StorageResult<()> {
+        <Self as StorageBackend>::initialize(self).await
+    }
+    
+    async fn health_check(&self) -> StorageResult<()> {
+        <Self as StorageBackend>::health_check(self).await.map(|_| ())
+    }
+    
+    fn backend_type(&self) -> &str {
+        <Self as StorageBackend>::backend_type(self)
     }
 }
 

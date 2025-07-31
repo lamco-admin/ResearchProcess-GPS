@@ -52,15 +52,19 @@ impl From<PostgresError> for rp_storage::StorageError {
             PostgresError::Connection(e) => {
                 // Check for specific error types
                 if let Some(db_err) = e.as_database_error() {
-                    match db_err.code().as_ref() {
-                        "23505" => { // unique_violation
-                            // Try to extract entity ID from error message
-                            rp_storage::StorageError::AlreadyExists(uuid::Uuid::nil())
+                    if let Some(code) = db_err.code() {
+                        match code.as_ref() {
+                            "23505" => { // unique_violation
+                                // Try to extract entity ID from error message
+                                rp_storage::StorageError::AlreadyExists(uuid::Uuid::nil())
+                            }
+                            "23503" => { // foreign_key_violation
+                                rp_storage::StorageError::NotFound(uuid::Uuid::nil())
+                            }
+                            _ => rp_storage::StorageError::BackendError(e.to_string()),
                         }
-                        "23503" => { // foreign_key_violation
-                            rp_storage::StorageError::NotFound(uuid::Uuid::nil())
-                        }
-                        _ => rp_storage::StorageError::BackendError(e.to_string()),
+                    } else {
+                        rp_storage::StorageError::BackendError(e.to_string())
                     }
                 } else {
                     rp_storage::StorageError::ConnectionError(e.to_string())

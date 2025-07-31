@@ -8,9 +8,10 @@ use chrono::{DateTime, Utc};
 
 use rp_storage::{
     QueryableBackend, StorageResult, StorageError,
-    Query, QueryResult, Filter, SortOrder, Projection,
+    Query, QueryResult, Filter, SortOrder,
     IndexDefinition, IndexInfo, StorageEntity,
 };
+use std::collections::HashMap;
 
 use crate::{PostgresBackend, PostgresError};
 
@@ -73,7 +74,7 @@ impl QueryableBackend for PostgresBackend {
         }
         
         // Execute query
-        let mut conn = self.pool.pool().acquire().await
+        let mut conn = self.pool().pool().acquire().await
             .map_err(PostgresError::from)?;
         
         let rows = builder
@@ -106,7 +107,7 @@ impl QueryableBackend for PostgresBackend {
     async fn create_index(&self, index: IndexDefinition) -> StorageResult<()> {
         debug!("Creating index: {}", index.name);
         
-        let mut conn = self.pool.pool().acquire().await
+        let mut conn = self.pool().pool().acquire().await
             .map_err(PostgresError::from)?;
         
         // Build index SQL
@@ -145,7 +146,7 @@ impl QueryableBackend for PostgresBackend {
     async fn list_indexes(&self) -> StorageResult<Vec<IndexInfo>> {
         debug!("Listing indexes");
         
-        let mut conn = self.pool.pool().acquire().await
+        let mut conn = self.pool().pool().acquire().await
             .map_err(PostgresError::from)?;
         
         let rows = sqlx::query_as::<_, IndexRow>(
@@ -172,7 +173,7 @@ impl QueryableBackend for PostgresBackend {
     async fn drop_index(&self, name: &str) -> StorageResult<()> {
         debug!("Dropping index: {}", name);
         
-        let mut conn = self.pool.pool().acquire().await
+        let mut conn = self.pool().pool().acquire().await
             .map_err(PostgresError::from)?;
         
         sqlx::query(&format!("DROP INDEX IF EXISTS {}", name))
@@ -201,7 +202,7 @@ impl PostgresBackend {
             apply_filter(&mut builder, filter)?;
         }
         
-        let mut conn = self.pool.pool().acquire().await
+        let mut conn = self.pool().pool().acquire().await
             .map_err(PostgresError::from)?;
         
         let count: i64 = builder
@@ -215,7 +216,7 @@ impl PostgresBackend {
 }
 
 /// Apply a filter to the query builder
-fn apply_filter(builder: &mut QueryBuilder<'_, sqlx::Postgres>, filter: &Filter) -> StorageResult<()> {
+fn apply_filter<'q>(builder: &mut QueryBuilder<'q, sqlx::Postgres>, filter: &Filter) -> StorageResult<()> {
     match filter {
         Filter::Eq { field, value } => {
             if field.contains("->") {
@@ -223,7 +224,7 @@ fn apply_filter(builder: &mut QueryBuilder<'_, sqlx::Postgres>, filter: &Filter)
             } else {
                 builder.push(format!("{} = ", field));
             }
-            builder.push_bind(value);
+            builder.push_bind(value.clone());
         }
         Filter::Ne { field, value } => {
             if field.contains("->") {
@@ -231,7 +232,7 @@ fn apply_filter(builder: &mut QueryBuilder<'_, sqlx::Postgres>, filter: &Filter)
             } else {
                 builder.push(format!("{} != ", field));
             }
-            builder.push_bind(value);
+            builder.push_bind(value.clone());
         }
         Filter::Gt { field, value } => {
             if field.contains("->") {
@@ -239,7 +240,7 @@ fn apply_filter(builder: &mut QueryBuilder<'_, sqlx::Postgres>, filter: &Filter)
             } else {
                 builder.push(format!("{} > ", field));
             }
-            builder.push_bind(value);
+            builder.push_bind(value.clone());
         }
         Filter::Gte { field, value } => {
             if field.contains("->") {
@@ -247,7 +248,7 @@ fn apply_filter(builder: &mut QueryBuilder<'_, sqlx::Postgres>, filter: &Filter)
             } else {
                 builder.push(format!("{} >= ", field));
             }
-            builder.push_bind(value);
+            builder.push_bind(value.clone());
         }
         Filter::Lt { field, value } => {
             if field.contains("->") {
@@ -255,7 +256,7 @@ fn apply_filter(builder: &mut QueryBuilder<'_, sqlx::Postgres>, filter: &Filter)
             } else {
                 builder.push(format!("{} < ", field));
             }
-            builder.push_bind(value);
+            builder.push_bind(value.clone());
         }
         Filter::Lte { field, value } => {
             if field.contains("->") {
@@ -263,16 +264,21 @@ fn apply_filter(builder: &mut QueryBuilder<'_, sqlx::Postgres>, filter: &Filter)
             } else {
                 builder.push(format!("{} <= ", field));
             }
-            builder.push_bind(value);
+            builder.push_bind(value.clone());
         }
         Filter::In { field, values } => {
+            // Use PostgreSQL's proper JSONB array handling
             if field.contains("->") {
+                // For JSONB fields, we need to use the containment operator or array comparison
                 builder.push(format!("data{} = ANY(", field));
+                builder.push_bind(serde_json::to_value(values).unwrap());
+                builder.push("::jsonb[])");
             } else {
+                // For regular columns, use standard SQL array
                 builder.push(format!("{} = ANY(", field));
+                builder.push_bind(values.clone());
+                builder.push(")");
             }
-            builder.push_bind(values);
-            builder.push(")");
         }
         Filter::Contains { field, value } => {
             if field.contains("->") {
@@ -330,8 +336,6 @@ fn apply_filter(builder: &mut QueryBuilder<'_, sqlx::Postgres>, filter: &Filter)
     
     Ok(())
 }
-
-use std::collections::HashMap;
 
 // Helper structs
 #[derive(sqlx::FromRow)]

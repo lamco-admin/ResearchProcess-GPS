@@ -27,7 +27,7 @@ pub struct PostgresBackendFactory;
 
 #[async_trait::async_trait]
 impl rp_storage::BackendFactory for PostgresBackendFactory {
-    async fn create(&self, url: &str) -> rp_storage::StorageResult<Box<dyn rp_storage::StorageBackend>> {
+    async fn create(&self, url: &str) -> rp_storage::StorageResult<Box<dyn rp_storage::DynStorageBackend>> {
         let config = PostgresConfig::from_url(url)?;
         let backend = PostgresBackend::new(config).await?;
         Ok(Box::new(backend))

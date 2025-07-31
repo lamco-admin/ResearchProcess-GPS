@@ -7,7 +7,7 @@ use serde_json::Value as JsonValue;
 use tracing::{debug, instrument};
 
 use rp_storage::{
-    VectorSearchBackend, StorageResult, StorageError,
+    VectorSearchBackend, StorageBackend, StorageResult, StorageError,
     VectorSearchResult,
 };
 
@@ -30,7 +30,7 @@ impl VectorSearchBackend for PostgresBackend {
         
         debug!("Storing embeddings for entity: {} (dimension: {})", entity_id, embeddings.len());
         
-        let mut conn = self.pool.pool().acquire().await
+        let mut conn = self.pool().pool().acquire().await
             .map_err(PostgresError::from)?;
         
         // Update entity with embeddings
@@ -45,6 +45,9 @@ impl VectorSearchBackend for PostgresBackend {
         
         // Store metadata if provided
         if let Some(meta) = metadata {
+            let model_name = meta.get("model").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
+            let meta_json = serde_json::to_value(&meta).unwrap();
+            
             sqlx::query(
                 r#"
                 INSERT INTO vector_metadata (entity_id, embedding_model, metadata)
@@ -54,8 +57,8 @@ impl VectorSearchBackend for PostgresBackend {
                 "#
             )
             .bind(&entity_id)
-            .bind(meta.get("model").and_then(|v| v.as_str()).unwrap_or("unknown"))
-            .bind(&serde_json::to_value(meta).unwrap())
+            .bind(&model_name)
+            .bind(&meta_json)
             .execute(&mut *conn)
             .await
             .map_err(PostgresError::from)?;
@@ -79,7 +82,7 @@ impl VectorSearchBackend for PostgresBackend {
         
         debug!("Performing vector search (dimension: {}, limit: {})", query_vector.len(), limit);
         
-        let mut conn = self.pool.pool().acquire().await
+        let mut conn = self.pool().pool().acquire().await
             .map_err(PostgresError::from)?;
         
         // Build query with optional filters
@@ -135,7 +138,7 @@ impl VectorSearchBackend for PostgresBackend {
         
         debug!("Deleting embeddings for entity: {}", entity_id);
         
-        let mut conn = self.pool.pool().acquire().await
+        let mut conn = self.pool().pool().acquire().await
             .map_err(PostgresError::from)?;
         
         let result = sqlx::query(

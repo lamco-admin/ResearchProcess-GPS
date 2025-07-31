@@ -1,7 +1,7 @@
 //! PostgreSQL transaction implementation
 
 use async_trait::async_trait;
-use sqlx::{postgres::PgQueryResult, Postgres, Transaction as SqlxTransaction};
+use sqlx::{Postgres, Transaction as SqlxTransaction};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde_json::Value as JsonValue;
@@ -13,7 +13,7 @@ use rp_storage::{
     StorageEntity, VersionData,
 };
 
-use crate::{PostgresError, PostgresResult};
+use crate::PostgresError;
 
 /// PostgreSQL transaction wrapper
 pub struct PostgresTransaction {
