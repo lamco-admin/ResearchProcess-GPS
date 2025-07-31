@@ -8,6 +8,7 @@ edition.workspace = true
 # Core dependencies
 rp-core = { path = "../rp-core" }
 rp-storage = { path = "../rp-storage" }
+rp-events = { path = "../rp-events" }
 
 # Async runtime
 async-trait.workspace = true
