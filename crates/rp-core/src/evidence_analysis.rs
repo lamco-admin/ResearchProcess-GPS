@@ -9,7 +9,7 @@ use validator::Validate;
 use crate::{
     work_product::{WorkProduct, WorkProductType},
     entity::{Entity, EntityData},
-    source::{SourceQuality, SourceClass, InformationClass},
+    source::{SourceQuality, InformationClass},
     EntityId, impl_validatable,
 };
 

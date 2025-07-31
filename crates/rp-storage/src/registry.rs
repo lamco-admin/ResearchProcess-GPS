@@ -50,25 +50,18 @@ impl StorageRegistry {
         let registry = Self::new();
         
         // Register built-in backends based on features
-        #[cfg(feature = "postgres")]
-        {
-            // registry.register(PostgresBackendFactory::new());
-        }
+        // TODO: Add feature flags and implementations when ready
+        // #[cfg(feature = "postgres")]
+        // registry.register(PostgresBackendFactory::new());
         
-        #[cfg(feature = "sqlite")]
-        {
-            // registry.register(SqliteBackendFactory::new());
-        }
+        // #[cfg(feature = "sqlite")]
+        // registry.register(SqliteBackendFactory::new());
         
-        #[cfg(feature = "storage-git")]
-        {
-            // registry.register(GitBackendFactory::new());
-        }
+        // #[cfg(feature = "storage-git")]
+        // registry.register(GitBackendFactory::new());
         
-        #[cfg(feature = "storage-fs")]
-        {
-            // registry.register(FilesystemBackendFactory::new());
-        }
+        // #[cfg(feature = "storage-fs")]
+        // registry.register(FilesystemBackendFactory::new());
         
         registry
     }
