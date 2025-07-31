@@ -376,7 +376,7 @@ mod tests {
         assert_eq!(theory.state, TheoryState::Draft);
         assert_eq!(theory.question, "Who were the parents of John Doe?");
         assert_eq!(theory.priority, 3);
-        assert!(theory.validate().await.is_valid());
+        assert!(validator::Validate::validate(&theory).is_ok());
     }
     
     #[tokio::test]

@@ -255,7 +255,7 @@ mod tests {
         );
         
         assert_eq!(confidence.level, ConfidenceLevel::High);
-        assert!(confidence.validate().await.is_valid());
+        assert!(validator::Validate::validate(&confidence).is_ok());
     }
     
     #[tokio::test]

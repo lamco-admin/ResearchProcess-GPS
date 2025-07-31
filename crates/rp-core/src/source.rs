@@ -683,7 +683,7 @@ mod tests {
         assert_eq!(source.title, "1920 US Census");
         assert_eq!(source.source_type, SourceType::Collection);
         assert_eq!(source.state, SourceState::Draft);
-        assert!(source.validate().await.is_valid());
+        assert!(validator::Validate::validate(&source).is_ok());
     }
     
     #[tokio::test]

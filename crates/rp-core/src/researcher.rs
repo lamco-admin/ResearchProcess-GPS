@@ -175,6 +175,7 @@ pub fn system_researcher() -> Researcher {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::entity::Entity;
     
     #[tokio::test]
     async fn test_researcher_creation() {
@@ -183,7 +184,7 @@ mod tests {
         
         assert_eq!(researcher.name, "John Doe");
         assert_eq!(researcher.created_by(), creator_id);
-        assert!(researcher.validate().await.is_valid());
+        assert!(researcher.validate().is_ok());
     }
     
     #[tokio::test]
@@ -191,17 +192,17 @@ mod tests {
         let creator_id = EntityId::new();
         let mut researcher = Researcher::new("", creator_id); // Empty name
         
-        let result = researcher.validate().await;
-        assert!(!result.is_valid());
+        let result = researcher.validate();
+        assert!(result.is_err());
         
         researcher.name = "Valid Name".to_string();
         researcher.email = Some("invalid-email".to_string()); // Invalid email
         
-        let result = researcher.validate().await;
-        assert!(!result.is_valid());
+        let result = researcher.validate();
+        assert!(result.is_err());
         
         researcher.email = Some("valid@email.com".to_string());
-        let result = researcher.validate().await;
-        assert!(result.is_valid());
+        let result = researcher.validate();
+        assert!(result.is_ok());
     }
 }

@@ -351,7 +351,8 @@ impl IdentityPersona {
     /// Add an alternative name
     pub fn add_alternative_name(&mut self, name: impl Into<String>) {
         let name = name.into();
-        if !self.alternative_names.contains(&name) {
+        // Don't add if it's the same as primary name or already exists
+        if name != self.primary_name && !self.alternative_names.contains(&name) {
             self.alternative_names.push(name);
             self.metadata.update(self.metadata.modified_by);
         }
@@ -560,7 +561,7 @@ mod tests {
         assert_eq!(identity.state, IdentityState::Reference);
         assert_eq!(identity.primary_name, "John Smith");
         assert_eq!(identity.identity_type, IdentityType::Named);
-        assert!(identity.validate().await.is_valid());
+        assert!(validator::Validate::validate(&identity).is_ok());
     }
     
     #[tokio::test]
@@ -608,11 +609,17 @@ mod tests {
         // Should fail - not concluded yet
         assert!(identity.add_fact_reference(fact_id).is_err());
         
-        // Transition to concluded state
+        // Transition through valid states to reach concluded
+        identity.transition(
+            IdentityState::Working,
+            researcher_id,
+            Some("Starting research".to_string())
+        ).await.unwrap();
+        
         identity.transition(
             IdentityState::Concluded,
             researcher_id,
-            None
+            Some("Sufficient evidence found".to_string())
         ).await.unwrap();
         
         // Should succeed now

@@ -38,12 +38,17 @@ impl EntityId {
     
     /// Get the timestamp from this UUID v7
     pub fn timestamp(&self) -> Option<chrono::DateTime<chrono::Utc>> {
-        // UUID v7 has timestamp in the first 48 bits
+        // UUID v7 has a 48-bit big-endian timestamp in milliseconds
+        // The timestamp occupies bytes 0-5, with the version taking 4 bits of byte 6
         let bytes = self.0.as_bytes();
-        let timestamp_ms = u64::from_be_bytes([
-            0, 0,
-            bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5],
-        ]) >> 4; // Remove version bits
+        
+        // Extract the 48-bit timestamp
+        let timestamp_ms = ((bytes[0] as u64) << 40)
+            | ((bytes[1] as u64) << 32)
+            | ((bytes[2] as u64) << 24)
+            | ((bytes[3] as u64) << 16)
+            | ((bytes[4] as u64) << 8)
+            | (bytes[5] as u64);
         
         chrono::DateTime::from_timestamp_millis(timestamp_ms as i64)
     }
@@ -115,6 +120,7 @@ mod tests {
         let now = chrono::Utc::now();
         let ts = timestamp.unwrap();
         let diff = now - ts;
-        assert!(diff.num_seconds() < 60);
+        // Allow for small time differences or clock drift
+        assert!(diff.num_seconds() < 60 && diff.num_seconds() >= -1);
     }
 }

@@ -480,7 +480,7 @@ mod tests {
         
         assert_eq!(evidence.title, "1920 Census - Smith Family");
         assert_eq!(evidence.classification.record_type, RecordType::Census);
-        assert!(evidence.validate().await.is_valid());
+        assert!(validator::Validate::validate(&evidence).is_ok());
     }
     
     #[tokio::test]
