@@ -106,12 +106,41 @@ impl PostgresConfig {
             ));
         }
         
+        // Host is required for database connection
+        let host = url.host_str()
+            .ok_or_else(|| rp_storage::StorageError::ConfigError(
+                "Database URL must include a host".to_string()
+            ))?
+            .to_string();
+        
+        // Port can be optional - PostgreSQL default is 5432
+        let port = url.port().unwrap_or(5432);
+        
+        // Database name is required
+        let database = url.path().trim_start_matches('/');
+        if database.is_empty() {
+            return Err(rp_storage::StorageError::ConfigError(
+                "Database URL must include a database name after the host".to_string()
+            ));
+        }
+        
+        // Username is required
+        let username = url.username();
+        if username.is_empty() {
+            return Err(rp_storage::StorageError::ConfigError(
+                "Database URL must include a username".to_string()
+            ));
+        }
+        
+        // Password can be empty but should be explicit
+        let password = url.password().map(|s| s.to_string());
+        
         let mut config = Self {
-            host: url.host_str().unwrap_or("localhost").to_string(),
-            port: url.port().unwrap_or(5432),
-            database: url.path().trim_start_matches('/').to_string(),
-            username: url.username().to_string(),
-            password: url.password().unwrap_or("").to_string(),
+            host,
+            port,
+            database: database.to_string(),
+            username: username.to_string(),
+            password: password.unwrap_or_default(), // Empty password is valid
             ..Default::default()
         };
         

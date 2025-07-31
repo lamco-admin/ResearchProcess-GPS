@@ -190,7 +190,7 @@ pub async fn search_entities(
     let search_results: Vec<SearchResult> = results
         .into_iter()
         .map(|row| {
-            let entity_type = crate::entity_type_mapper::parse_entity_type(&row.entity_type);
+            let entity_type = crate::entity_type_mapper::parse_entity_type(&row.entity_type)?;
             let entity = EntityResponse {
                 id: row.id,
                 entity_type,
@@ -212,13 +212,13 @@ pub async fn search_entities(
                 None
             };
             
-            SearchResult {
+            Ok(SearchResult {
                 entity,
                 score: row.score,
                 highlights,
-            }
+            })
         })
-        .collect();
+        .collect::<Result<Vec<_>, ApiError>>()?;
     
     Ok(Json(SearchResponse {
         results: search_results,

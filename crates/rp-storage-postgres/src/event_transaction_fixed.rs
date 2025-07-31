@@ -59,21 +59,21 @@ impl EventSourcedTransaction {
         let event = match entity.entity_type.as_str() {
             "Theory" => {
                 if !exists {
-                    // Theory created
-                    let question = entity.data.get("question")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("")
-                        .to_string();
-                    let hypothesis = entity.data.get("hypothesis")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("")
-                        .to_string();
-                    
-                    Some(DomainEvent::Theory(TheoryEvent::Created {
-                        question,
-                        hypothesis,
-                        researcher_id: entity.created_by,
-                    }))
+                    // Theory requires at least a question
+                    if let Some(question) = entity.data.get("question").and_then(|v| v.as_str()) {
+                        let hypothesis = entity.data.get("hypothesis")
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_string());
+                        
+                        Some(DomainEvent::Theory(TheoryEvent::Created {
+                            question: question.to_string(),
+                            hypothesis: hypothesis.unwrap_or_else(|| "".to_string()), // Empty hypothesis is acceptable
+                            researcher_id: entity.created_by,
+                        }))
+                    } else {
+                        tracing::warn!("Theory created without question, skipping event");
+                        None
+                    }
                 } else if let Some(old) = old_entity {
                     // Check for state change
                     let old_state = old.data.get("state").and_then(|v| v.as_str());
@@ -81,12 +81,27 @@ impl EventSourcedTransaction {
                     
                     if old_state != new_state {
                         if let (Some(from), Some(to)) = (old_state, new_state) {
-                            // Parse states - this is simplified, you'd need proper deserialization
-                            Some(DomainEvent::Theory(TheoryEvent::StateChanged {
-                                from_state: serde_json::from_str(&format!("\"{}\"", from)).unwrap_or(TheoryState::Draft),
-                                to_state: serde_json::from_str(&format!("\"{}\"", to)).unwrap_or(TheoryState::Draft),
-                                reason: "State transition".to_string(),
-                            }))
+                            // Parse states - return None if parsing fails
+                            match (
+                                serde_json::from_str::<TheoryState>(&format!("\"{}\"", from)),
+                                serde_json::from_str::<TheoryState>(&format!("\"{}\"", to))
+                            ) {
+                                (Ok(from_state), Ok(to_state)) => {
+                                    Some(DomainEvent::Theory(TheoryEvent::StateChanged {
+                                        from_state,
+                                        to_state,
+                                        reason: "State transition".to_string(),
+                                    }))
+                                }
+                                _ => {
+                                    // Log error and skip event if state parsing fails
+                                    tracing::error!(
+                                        "Failed to parse theory state transition: {} -> {}",
+                                        from, to
+                                    );
+                                    None
+                                }
+                            }
                         } else {
                             None
                         }
@@ -136,16 +151,17 @@ impl EventSourcedTransaction {
             
             "Source" => {
                 if !exists {
-                    let title = entity.data.get("title")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("Untitled")
-                        .to_string();
-                    
-                    Some(DomainEvent::Source(SourceEvent::Created {
-                        source_type: SourceType::Item, // Would need proper parsing
-                        title,
-                        researcher_id: entity.created_by,
-                    }))
+                    // Title is required for source creation
+                    if let Some(title) = entity.data.get("title").and_then(|v| v.as_str()) {
+                        Some(DomainEvent::Source(SourceEvent::Created {
+                            source_type: SourceType::Item, // Would need proper parsing
+                            title: title.to_string(),
+                            researcher_id: entity.created_by,
+                        }))
+                    } else {
+                        tracing::warn!("Source created without title, skipping event");
+                        None
+                    }
                 } else {
                     Some(DomainEvent::Source(SourceEvent::Updated {
                         title: None,
@@ -156,20 +172,26 @@ impl EventSourcedTransaction {
             
             "Evidence" => {
                 if !exists {
-                    let source_id = entity.data.get("source_id")
-                        .and_then(|v| v.as_str())
-                        .and_then(|s| Uuid::parse_str(s).ok())
-                        .unwrap_or_default();
-                    let original_text = entity.data.get("original_text")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("")
-                        .to_string();
-                    
-                    Some(DomainEvent::Evidence(EvidenceEvent::Extracted {
-                        source_id,
-                        original_text,
-                        researcher_id: entity.created_by,
-                    }))
+                    // Both source_id and original_text are required for evidence
+                    match (
+                        entity.data.get("source_id")
+                            .and_then(|v| v.as_str())
+                            .and_then(|s| Uuid::parse_str(s).ok()),
+                        entity.data.get("original_text")
+                            .and_then(|v| v.as_str())
+                    ) {
+                        (Some(source_id), Some(original_text)) => {
+                            Some(DomainEvent::Evidence(EvidenceEvent::Extracted {
+                                source_id,
+                                original_text: original_text.to_string(),
+                                researcher_id: entity.created_by,
+                            }))
+                        }
+                        _ => {
+                            tracing::warn!("Evidence created without required fields, skipping event");
+                            None
+                        }
+                    }
                 } else {
                     Some(DomainEvent::Evidence(EvidenceEvent::Updated {
                         interpreted_text: None,
@@ -180,15 +202,16 @@ impl EventSourcedTransaction {
             
             "Researcher" => {
                 if !exists {
-                    let name = entity.data.get("name")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("Unknown")
-                        .to_string();
-                    
-                    Some(DomainEvent::Researcher(ResearcherEvent::Created {
-                        name,
-                        researcher_type: "Individual".to_string(),
-                    }))
+                    // Name is required for researcher
+                    if let Some(name) = entity.data.get("name").and_then(|v| v.as_str()) {
+                        Some(DomainEvent::Researcher(ResearcherEvent::Created {
+                            name: name.to_string(),
+                            researcher_type: "Individual".to_string(),
+                        }))
+                    } else {
+                        tracing::warn!("Researcher created without name, skipping event");
+                        None
+                    }
                 } else {
                     Some(DomainEvent::Researcher(ResearcherEvent::Updated {
                         name: None,
@@ -199,15 +222,16 @@ impl EventSourcedTransaction {
             
             "Workspace" => {
                 if !exists {
-                    let name = entity.data.get("name")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("Default Workspace")
-                        .to_string();
-                    
-                    Some(DomainEvent::Workspace(WorkspaceEvent::Created {
-                        name,
-                        owner_id: entity.created_by,
-                    }))
+                    // Name is required for workspace
+                    if let Some(name) = entity.data.get("name").and_then(|v| v.as_str()) {
+                        Some(DomainEvent::Workspace(WorkspaceEvent::Created {
+                            name: name.to_string(),
+                            owner_id: entity.created_by,
+                        }))
+                    } else {
+                        tracing::warn!("Workspace created without name, skipping event");
+                        None
+                    }
                 } else {
                     None // Workspace updates handled differently
                 }
@@ -290,8 +314,13 @@ impl StorageTrait for EventSourcedTransaction {
         
         // Generate and publish event
         if let Some(event) = self.generate_event(entity, exists, old_entity.as_ref()).await? {
-            let version = self.event_store.get_aggregate_version(entity.id).await
-                .unwrap_or(0);
+            let version = match self.event_store.get_aggregate_version(entity.id).await {
+                Ok(v) => v,
+                Err(e) => {
+                    tracing::error!("Failed to get aggregate version: {}", e);
+                    return Err(PostgresError::from(e).into());
+                }
+            };
             
             let metadata = EventBuilder::new(
                 entity.id,
@@ -446,8 +475,9 @@ impl StorageTrait for EventSourcedTransaction {
     ) -> StorageResult<Vec<StorageEntity>> {
         debug!("Listing entities of type: {}", entity_type);
         
-        let limit = limit.unwrap_or(1000) as i64;
-        let offset = offset.unwrap_or(0) as i64;
+        // Use explicit defaults for pagination
+        let limit = limit.map(|l| l as i64).unwrap_or(1000);
+        let offset = offset.map(|o| o as i64).unwrap_or(0);
         
         let rows = sqlx::query!(
             r#"

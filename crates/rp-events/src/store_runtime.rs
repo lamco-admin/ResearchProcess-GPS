@@ -123,7 +123,7 @@ impl PostgresEventStore {
         .fetch_one(&mut **tx)
         .await?;
         
-        Ok(result.0.unwrap_or(0))
+        result.0.ok_or_else(|| EventStoreError::Other("Failed to append event - no version returned".to_string()))
     }
 }
 

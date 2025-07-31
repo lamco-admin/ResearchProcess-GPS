@@ -83,8 +83,10 @@ async fn handle_socket(socket: WebSocket, app_state: Arc<AppState>) {
                                 }
                                 SubscriptionType::EntityType => {
                                     if let Some(ref expected_type) = sub.params.entity_type {
-                                        let event_entity_type = parse_entity_type(&event.aggregate_type);
-                                        expected_type == &event_entity_type
+                                        match parse_entity_type(&event.aggregate_type) {
+                                            Ok(event_entity_type) => expected_type == &event_entity_type,
+                                            Err(_) => false, // Unknown entity type, don't match
+                                        }
                                     } else {
                                         false
                                     }
@@ -103,34 +105,48 @@ async fn handle_socket(socket: WebSocket, app_state: Arc<AppState>) {
                 };
                 
                 if should_send {
-                    // Convert to protocol event notification
-                    let proto_event = ProtoEventNotification {
-                        event_id: event.event_id,
-                        event_type: match event.event_type.as_str() {
-                            "created" => EventType::Created,
-                            "updated" => EventType::Updated,
-                            "deleted" => EventType::Deleted,
-                            _ => EventType::Custom(event.event_type.clone()),
-                        },
-                        entity_type: parse_entity_type(&event.aggregate_type),
-                        entity_id: event.aggregate_id,
-                        version: event.version.unwrap_or(0),
-                        data: event.event_data.clone(),
-                        metadata: ProtoEventMetadata {
-                            occurred_at: event.occurred_at,
-                            actor_id: event.actor_id.unwrap_or(Uuid::nil()),
-                            workspace_id: None,
-                            correlation_id: None,
-                            tags: None,
-                        },
-                    };
-                    
-                    let msg = ServerMessage {
-                        id: None,
-                        payload: ServerMessagePayload::Event(proto_event),
-                    };
-                    
-                    let _ = tx.send(msg);
+                    // Parse entity type, skip event if unknown
+                    if let Ok(entity_type) = parse_entity_type(&event.aggregate_type) {
+                        // Validate required fields - skip event if missing
+                        if let (Some(version), Some(actor_id)) = (event.version, event.actor_id) {
+                            // Convert to protocol event notification
+                            let proto_event = ProtoEventNotification {
+                                event_id: event.event_id,
+                                event_type: match event.event_type.as_str() {
+                                    "created" => EventType::Created,
+                                    "updated" => EventType::Updated,
+                                    "deleted" => EventType::Deleted,
+                                    _ => EventType::Custom(event.event_type.clone()),
+                                },
+                                entity_type,
+                                entity_id: event.aggregate_id,
+                                version,
+                                data: event.event_data.clone(),
+                                metadata: ProtoEventMetadata {
+                                    occurred_at: event.occurred_at,
+                                    actor_id,
+                                    workspace_id: None,
+                                    correlation_id: None,
+                                    tags: None,
+                                },
+                            };
+                        
+                            let msg = ServerMessage {
+                                id: None,
+                                payload: ServerMessagePayload::Event(proto_event),
+                            };
+                            
+                            let _ = tx.send(msg);
+                        } else {
+                            // Log warning about missing required fields
+                            tracing::warn!(
+                                "Skipping event {} - missing required fields (version: {:?}, actor_id: {:?})",
+                                event.event_id,
+                                event.version,
+                                event.actor_id
+                            );
+                        }
+                    }
                 }
             }
         })
