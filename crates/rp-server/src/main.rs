@@ -10,6 +10,7 @@ use rp_server::{
         websocket::websocket_handler,
     },
     middleware::{auth_middleware, request_id_middleware},
+    notify::start_notification_listener,
     state::AppState,
 };
 use std::sync::Arc;
@@ -36,6 +37,9 @@ async fn main() -> anyhow::Result<()> {
 
     // Initialize app state
     let state = Arc::new(AppState::new(&config.database.url).await?);
+    
+    // Start PostgreSQL notification listener
+    start_notification_listener(state.pg_pool.clone(), state.event_tx.clone()).await?;
 
     // Build our application with routes
     let app = create_router(state);
