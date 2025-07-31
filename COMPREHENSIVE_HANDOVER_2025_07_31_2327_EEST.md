@@ -114,34 +114,49 @@ archive/deprecated/   # Old documents
 
 ## 🚀 SPECIFIC NEXT TASKS
 
-### 1. Fix EntityType Enum (High Priority)
-**File**: `crates/rp-core/src/layer3/mod.rs`
-- Add missing 9 entities to enum
-- Remove Repository (it's a SourceType, not entity)
-- Ensure 1:1 mapping with 22 implemented entities
+### ⚠️ CRITICAL: Architectural Refactoring Required (Priority #1)
+**Discovery**: Major architectural inconsistencies found on 2025-08-01
+- Entity count is 19 (not 22) + 5 ConfigEntities
+- EntityType enum incomplete (13 entries, needs 19)
+- NO_FALLBACK_POLICY violations in entity_type_mapper
+- See: `ARCHITECTURAL_REFACTORING_PLAN_2025_08_01_0043_EEST.md`
 
-### 2. Complete Phase 3 Documentation
+### 1. Fix EntityType Enum (URGENT)
+**File**: `crates/rp-core/src/layer3/mod.rs`
+- Add missing 7 entities to enum
+- Remove Repository (it's a SourceType, not entity)
+- Total should be 19 entities
+
+### 2. Remove NO_FALLBACK_POLICY Violations (URGENT)
+**File**: `crates/rp-server/src/entity_type_mapper.rs`
+- Remove fallback to Theory
+- Fix incorrect alias mappings
+- Return errors for unknown types
+
+### 3. Complete Phase 3 Documentation (After refactoring)
 - Implement OpenAPI/Swagger docs with utoipa
 - Add rate limiting with tower-governor (optional)
 
-### 3. Begin Phase 4: Query DSL
+### 4. Begin Phase 4: Query DSL (After refactoring)
 - Design ResearchQL syntax
 - Choose parser: pest or nom
 - Implement basic query structure
-
-### 4. Update API Documentation
-- Clarify that /api/v1/persons/* endpoints operate on IdentityPersona
-- Document evolved entity model
 
 ---
 
 ## 🔗 ESSENTIAL REFERENCE DOCUMENTS
 
 ### Current Project State
-1. **Master Plan**: `RESEARCHPROCESS_GPS_MASTER_PLAN_v2.3_2025_07_31_2327_EEST.md`
+1. **Master Plan**: `RESEARCHPROCESS_GPS_MASTER_PLAN_v2.4_2025_08_01_0043_EEST.md`
    - Living document with all project details
    - Architecture decisions log
    - Entity implementation matrix
+   - CRITICAL: See Addendum A for urgent refactoring
+
+2. **Architectural Refactoring Plan**: `ARCHITECTURAL_REFACTORING_PLAN_2025_08_01_0043_EEST.md`
+   - PRIORITY #1 - Must complete before other work
+   - Fixes EntityType enum and layer organization
+   - Removes NO_FALLBACK_POLICY violations
 
 2. **Conceptual Model**: `docs/concepts/UNIFIED_CONCEPTUAL_MODEL_ALIGNED_2025_07_31_2243_EEST.md`
    - Accurate representation of 22 implemented entities
