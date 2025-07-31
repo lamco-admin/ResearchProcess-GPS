@@ -19,6 +19,7 @@ pub fn parse_entity_type(type_str: &str) -> EntityType {
         "Person" => EntityType::IdentityPersona,
         "Document" => EntityType::WorkProduct,
         "Analysis" => EntityType::Theory,
+        "Workspace" => EntityType::WorkProduct, // Use WorkProduct as a placeholder for Workspace
         // Default to Theory for unknown types
         _ => {
             tracing::warn!("Unknown entity type '{}', defaulting to Theory", type_str);

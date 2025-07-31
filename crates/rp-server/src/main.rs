@@ -8,6 +8,9 @@ use rp_server::{
     handlers::{
         create_entity, delete_entity, get_entity, health_handler, list_entities, update_entity,
         websocket::websocket_handler,
+        branch_theory, get_theory_evidence, get_theory_compliance_status,
+        get_person_timeline, get_person_relationships, merge_persons,
+        list_workspace_members, invite_workspace_member, remove_workspace_member,
     },
     middleware::{auth_middleware, request_id_middleware},
     notify::start_notification_listener,
@@ -64,6 +67,18 @@ fn create_router(state: Arc<AppState>) -> Router {
             "/entities/:id",
             get(get_entity).put(update_entity).delete(delete_entity),
         )
+        // Theory-specific endpoints
+        .route("/theories/:id/branch", post(branch_theory))
+        .route("/theories/:id/evidence", get(get_theory_evidence))
+        .route("/theories/:id/compliance-status", get(get_theory_compliance_status))
+        // Person-specific endpoints
+        .route("/persons/:id/timeline", get(get_person_timeline))
+        .route("/persons/:id/relationships", get(get_person_relationships))
+        .route("/persons/:id/merge", post(merge_persons))
+        // Workspace-specific endpoints
+        .route("/workspaces/:id/members", get(list_workspace_members))
+        .route("/workspaces/:id/invite", post(invite_workspace_member))
+        .route("/workspaces/:id/members/:member_id", axum::routing::delete(remove_workspace_member))
         // WebSocket endpoint
         .route("/ws", get(websocket_handler))
         // Add auth middleware to all API routes
