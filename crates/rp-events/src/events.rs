@@ -30,7 +30,7 @@ pub enum DomainEvent {
     Citation(CitationEvent),
     Confidence(ConfidenceEvent),
     Relationship(RelationshipEvent),
-    EvidenceAnalysis(EvidenceAnalysisEvent),
+    AnalysisReport(AnalysisReportEvent),
     ProofStatement(ProofStatementEvent),
     Fact(FactEvent),
     
@@ -288,10 +288,10 @@ pub enum RelationshipEvent {
     },
 }
 
-// EvidenceAnalysis Events
+// AnalysisReport Events
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "event_type")]
-pub enum EvidenceAnalysisEvent {
+pub enum AnalysisReportEvent {
     Created {
         theory_id: Uuid,
         analyst_id: Uuid,
@@ -696,7 +696,7 @@ impl DomainEvent {
             DomainEvent::Citation(_) => "Citation",
             DomainEvent::Confidence(_) => "Confidence",
             DomainEvent::Relationship(_) => "Relationship",
-            DomainEvent::EvidenceAnalysis(_) => "EvidenceAnalysis",
+            DomainEvent::AnalysisReport(_) => "AnalysisReport",
             DomainEvent::ProofStatement(_) => "ProofStatement",
             DomainEvent::Fact(_) => "Fact",
             DomainEvent::Researcher(_) => "Researcher",

@@ -127,19 +127,30 @@ pub enum Severity {
     Info,
 }
 
-/// Entity types that rules can apply to (simplified for Layer 3)
+/// Entity types that rules can apply to
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EntityType {
-    Theory,
-    Evidence,
-    Source,
-    Repository,
-    WorkProduct,
-    ProofStatement,
-    Researcher,
-    ResearchLog,
+    // Layer 1 - Core Data Model (9 entities)
+    Analysis,
     Citation,
+    Confidence,
+    Evidence,
     Fact,
     IdentityPersona,
+    Location,
     Relationship,
+    Source,
+    
+    // Layer 2 - Research Process & Products (9 entities)
+    AnalysisReport,
+    ProofStatement,
+    ResearchActivity,
+    Researcher,
+    ResearchLog,
+    ResearchSession,
+    Theory,
+    WorkProduct,
+    
+    // Layer 3 - Workflow & Configuration (1 entity)
+    Workspace,
 }

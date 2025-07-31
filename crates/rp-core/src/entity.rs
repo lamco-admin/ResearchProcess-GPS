@@ -176,7 +176,7 @@ macro_rules! impl_entity {
                     modified_at: self.metadata.modified_at,
                     is_active: self.metadata.is_active,
                     version: Some(self.metadata.version),
-                    data: serde_json::to_value(self).unwrap_or(serde_json::Value::Null),
+                    data: serde_json::to_value(self).expect("Entity serialization should never fail"),
                 }
             }
         }

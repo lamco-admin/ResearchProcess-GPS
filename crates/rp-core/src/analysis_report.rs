@@ -1,4 +1,4 @@
-//! EvidenceAnalysis entity - Evidence analysis matrices and worksheets
+//! AnalysisReport entity - Evidence analysis matrices and worksheets
 //! Part of Layer 2: Research Process Model
 
 use async_trait::async_trait;
@@ -28,7 +28,7 @@ pub enum AnalysisMethod {
 
 /// Item being analyzed
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
-pub struct EvidenceAnalysisItem {
+pub struct AnalysisReportItem {
     /// Evidence entity ID
     pub evidence_id: EntityId,
     
@@ -258,7 +258,7 @@ pub struct EvidenceQualityAssessment {
 
 /// Evidence analysis entity
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
-pub struct EvidenceAnalysis {
+pub struct AnalysisReport {
     /// Base work product
     #[serde(flatten)]
     pub work_product: WorkProduct,
@@ -268,7 +268,7 @@ pub struct EvidenceAnalysis {
     
     /// Evidence items being analyzed
     #[validate(nested)]
-    pub evidence_items: Vec<EvidenceAnalysisItem>,
+    pub evidence_items: Vec<AnalysisReportItem>,
     
     /// Correlations found
     #[validate(nested)]
@@ -310,7 +310,7 @@ pub struct EvidenceAnalysis {
     pub statistics: serde_json::Value,
 }
 
-impl EvidenceAnalysis {
+impl AnalysisReport {
     /// Create a new evidence analysis
     pub fn new(
         analysis_method: AnalysisMethod,
@@ -318,7 +318,7 @@ impl EvidenceAnalysis {
         created_by: EntityId,
     ) -> Self {
         let work_product = WorkProduct::new(
-            WorkProductType::EvidenceAnalysis,
+            WorkProductType::AnalysisReport,
             "evidence-analysis-v1",
             "1.0.0",
             "2025.1",
@@ -353,7 +353,7 @@ impl EvidenceAnalysis {
     }
     
     /// Add evidence item for analysis
-    pub fn add_evidence_item(&mut self, item: EvidenceAnalysisItem) {
+    pub fn add_evidence_item(&mut self, item: AnalysisReportItem) {
         self.evidence_items.push(item);
         self.update_statistics();
         self.work_product.metadata.update(self.work_product.metadata.modified_by);
@@ -450,14 +450,14 @@ impl EvidenceAnalysis {
     }
     
     /// Get evidence by type
-    pub fn evidence_by_type(&self, evidence_type: EvidenceType) -> Vec<&EvidenceAnalysisItem> {
+    pub fn evidence_by_type(&self, evidence_type: EvidenceType) -> Vec<&AnalysisReportItem> {
         self.evidence_items.iter()
             .filter(|i| i.evidence_type == evidence_type)
             .collect()
     }
     
     /// Get high relevance evidence
-    pub fn high_relevance_evidence(&self) -> Vec<&EvidenceAnalysisItem> {
+    pub fn high_relevance_evidence(&self) -> Vec<&AnalysisReportItem> {
         self.evidence_items.iter()
             .filter(|i| matches!(i.relevance, Relevance::High))
             .collect()
@@ -497,15 +497,15 @@ impl EvidenceAnalysis {
     }
 }
 
-// Implement Entity trait for EvidenceAnalysis
+// Implement Entity trait for AnalysisReport
 #[async_trait]
-impl Entity for EvidenceAnalysis {
+impl Entity for AnalysisReport {
     fn id(&self) -> EntityId {
         self.work_product.id()
     }
     
     fn entity_type(&self) -> &'static str {
-        "EvidenceAnalysis"
+        "AnalysisReport"
     }
     
     fn created_by(&self) -> EntityId {
@@ -543,18 +543,19 @@ impl Entity for EvidenceAnalysis {
     }
 }
 
-impl_validatable!(EvidenceAnalysis);
+impl_validatable!(AnalysisReport);
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::source::SourceClass;
     
     #[test]
     fn test_evidence_analysis_creation() {
         let theory_id = EntityId::new();
         let researcher_id = EntityId::new();
         
-        let analysis = EvidenceAnalysis::new(
+        let analysis = AnalysisReport::new(
             AnalysisMethod::EvidenceExplained,
             theory_id,
             researcher_id,
@@ -572,7 +573,7 @@ mod tests {
         let evidence_id = EntityId::new();
         let source_id = EntityId::new();
         
-        let mut analysis = EvidenceAnalysis::new(
+        let mut analysis = AnalysisReport::new(
             AnalysisMethod::BCGStandards,
             theory_id,
             researcher_id,
@@ -596,7 +597,7 @@ mod tests {
             assessed_at: Utc::now(),
         };
         
-        let item = EvidenceAnalysisItem {
+        let item = AnalysisReportItem {
             evidence_id,
             source_id,
             description: "Birth certificate".to_string(),
@@ -623,7 +624,7 @@ mod tests {
         let evidence1 = EntityId::new();
         let evidence2 = EntityId::new();
         
-        let mut analysis = EvidenceAnalysis::new(
+        let mut analysis = AnalysisReport::new(
             AnalysisMethod::Custom("My Method".to_string()),
             theory_id,
             researcher_id,
@@ -654,7 +655,7 @@ mod tests {
         let source_id = EntityId::new();
         let evidence_id = EntityId::new();
         
-        let mut analysis = EvidenceAnalysis::new(
+        let mut analysis = AnalysisReport::new(
             AnalysisMethod::EvidenceExplained,
             theory_id,
             researcher_id,
@@ -729,7 +730,7 @@ mod tests {
         let evidence1 = EntityId::new();
         let evidence2 = EntityId::new();
         
-        let mut analysis = EvidenceAnalysis::new(
+        let mut analysis = AnalysisReport::new(
             AnalysisMethod::FamilySearch,
             theory_id,
             researcher_id,
@@ -772,7 +773,7 @@ mod tests {
         let theory_id = EntityId::new();
         let researcher_id = EntityId::new();
         
-        let mut analysis = EvidenceAnalysis::new(
+        let mut analysis = AnalysisReport::new(
             AnalysisMethod::BCGStandards,
             theory_id,
             researcher_id,
@@ -791,7 +792,7 @@ mod tests {
         let theory_id = EntityId::new();
         let researcher_id = EntityId::new();
         
-        let mut analysis = EvidenceAnalysis::new(
+        let mut analysis = AnalysisReport::new(
             AnalysisMethod::EvidenceExplained,
             theory_id,
             researcher_id,
@@ -817,7 +818,7 @@ mod tests {
                 assessed_at: Utc::now(),
             };
             
-            let item = EvidenceAnalysisItem {
+            let item = AnalysisReportItem {
                 evidence_id: EntityId::new(),
                 source_id: EntityId::new(),
                 description: format!("Evidence {}", i),
@@ -848,7 +849,7 @@ mod tests {
         let theory_id = EntityId::new();
         let researcher_id = EntityId::new();
         
-        let mut analysis = EvidenceAnalysis::new(
+        let mut analysis = AnalysisReport::new(
             AnalysisMethod::BCGStandards,
             theory_id,
             researcher_id,
@@ -884,7 +885,7 @@ mod tests {
         let theory_id = EntityId::new();
         let researcher_id = EntityId::new();
         
-        let mut analysis = EvidenceAnalysis::new(
+        let mut analysis = AnalysisReport::new(
             AnalysisMethod::EvidenceExplained,
             theory_id,
             researcher_id,
@@ -910,7 +911,7 @@ mod tests {
                 assessed_at: Utc::now(),
             };
             
-            let item = EvidenceAnalysisItem {
+            let item = AnalysisReportItem {
                 evidence_id: EntityId::new(),
                 source_id: EntityId::new(),
                 description: "Test evidence".to_string(),

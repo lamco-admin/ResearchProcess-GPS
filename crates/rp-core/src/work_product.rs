@@ -22,7 +22,7 @@ pub enum WorkProductType {
     /// Detailed proof argument
     ProofArgument,
     /// Analysis of evidence
-    EvidenceAnalysis,
+    AnalysisReport,
     /// General research report
     ResearchReport,
     /// Timeline visualization
@@ -555,7 +555,7 @@ mod tests {
         let analysis_id = EntityId::new();
         
         let mut product = WorkProduct::new(
-            WorkProductType::EvidenceAnalysis,
+            WorkProductType::AnalysisReport,
             "evidence-analysis-v1",
             "1.0.0",
             "2025.1",

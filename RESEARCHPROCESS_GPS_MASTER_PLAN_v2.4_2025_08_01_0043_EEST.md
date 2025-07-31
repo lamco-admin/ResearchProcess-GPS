@@ -209,6 +209,14 @@ This is the mark of a healthy project that improves during implementation rather
 
 ## 🔄 CHANGE LOG
 
+### 2025-08-01 01:36 EEST - Version 2.4.1
+- Completed EntityType enum fix - now has all 19 entities
+- Renamed EvidenceAnalysis to AnalysisReport throughout codebase
+- Fixed entity_type_mapper to remove NO_FALLBACK_POLICY violations
+- Discovered and documented NestableEntity trait pattern
+- Fixed ~60% of NO_FALLBACK_POLICY violations in critical files
+- Created comprehensive violation report and fix summary
+
 ### 2025-07-31 23:27 EEST - Version 2.3
 - Established Living Document Framework for maintaining accurate project state
 - Reorganized all project documentation following PROJECT_ORGANIZATION_POLICY
@@ -257,17 +265,21 @@ During detailed analysis, significant architectural inconsistencies were discove
 - Entity: Workspace
 - ConfigEntities: MethodologyConfig, ModuleConfig, StandardsRegistry, TemplateRegistry, ValidationRule
 
-### Required Actions:
+### Required Actions (Updated 2025-08-01 01:36):
 
-1. **Fix EntityType enum** - Update to 19 entries matching actual entities
-2. **Remove fallback behavior** - Fix NO_FALLBACK_POLICY violations
-3. **Clarify architecture** - Document Entity vs ConfigEntity distinction
-4. **Rename entities** - EvidenceAnalysis → AnalysisReport
-5. **Update documentation** - Reflect actual implementation
+1. **Fix EntityType enum** - ✅ COMPLETED - Now has 19 entries
+2. **Remove fallback behavior** - 🚧 IN PROGRESS - ~60% complete
+   - ✅ Fixed: websocket.rs, config.rs, event_transaction_fixed.rs, entity.rs
+   - 🔴 Remaining: event store, protocol layer, query builders
+3. **Clarify architecture** - ✅ COMPLETED - NestableEntity pattern documented
+4. **Rename entities** - ✅ COMPLETED - EvidenceAnalysis → AnalysisReport
+5. **Update documentation** - 🚧 PENDING - After all fixes complete
 
-**Full details**: See `ARCHITECTURAL_REFACTORING_PLAN_2025_08_01_0043_EEST.md`
+**Critical Discovery**: Extensive NO_FALLBACK_POLICY violations found throughout codebase
+- See: `NO_FALLBACK_POLICY_VIOLATIONS_2025_08_01_0140_EEST.md`
+- See: `NO_FALLBACK_FIXES_SUMMARY_2025_08_01_0200_EEST.md`
 
-**This refactoring is now Priority #1** and must be completed before any other development proceeds.
+**This refactoring remains Priority #1** with NO_FALLBACK_POLICY fixes being most critical.
 
 ---
 

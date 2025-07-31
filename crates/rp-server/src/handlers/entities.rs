@@ -89,8 +89,8 @@ pub async fn get_entity(
         .map_err(ApiError::Storage)?
         .ok_or(ApiError::NotFound)?;
     
-    // Convert entity_type string to enum - default to Theory if unknown
-    let entity_type = string_to_entity_type(&entity.entity_type);
+    // Convert entity_type string to enum
+    let entity_type = string_to_entity_type(&entity.entity_type)?;
 
     let response = EntityResponse {
         id: entity.id,
@@ -169,7 +169,7 @@ pub async fn update_entity(
         .ok_or(ApiError::NotFound)?;
     
     // Convert entity_type string to enum
-    let entity_type = string_to_entity_type(&updated.entity_type);
+    let entity_type = string_to_entity_type(&updated.entity_type)?;
 
     let response = EntityResponse {
         id: updated.id,
@@ -266,8 +266,8 @@ pub async fn list_entities(
     let items: Vec<EntityResponse> = entities
         .into_iter()
         .map(|entity| {
-            let entity_type = string_to_entity_type(&entity.entity_type);
-            EntityResponse {
+            let entity_type = string_to_entity_type(&entity.entity_type)?;
+            Ok(EntityResponse {
                 id: entity.id,
                 entity_type,
                 version: entity.version,
@@ -280,9 +280,9 @@ pub async fn list_entities(
                     workspace_id: None,
                     tags: None,
                 },
-            }
+            })
         })
-        .collect();
+        .collect::<Result<Vec<_>, ApiError>>()?;
 
     Ok(Json(ListResponse {
         items,
@@ -313,6 +313,6 @@ fn entity_type_to_string(entity_type: &EntityType) -> String {
     crate::entity_type_mapper::entity_type_to_string(entity_type).to_string()
 }
 
-fn string_to_entity_type(s: &str) -> EntityType {
+fn string_to_entity_type(s: &str) -> Result<EntityType, ApiError> {
     crate::entity_type_mapper::parse_entity_type(s)
 }
