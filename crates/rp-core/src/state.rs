@@ -4,10 +4,10 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
-use crate::{EntityId, Error, Result};
+use crate::{EntityId, Result};
 
 /// Trait for types that can be used as states
-pub trait State: Debug + Clone + PartialEq + Send + Sync + Serialize + for<'de> Deserialize<'de> {
+pub trait State: Debug + Clone + PartialEq + Send + Sync {
     /// Get the state name
     fn name(&self) -> &'static str;
     
@@ -24,7 +24,7 @@ pub trait State: Debug + Clone + PartialEq + Send + Sync + Serialize + for<'de> 
 
 /// State transition information
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StateTransition<S: State> {
+pub struct StateTransition<S> {
     pub from: S,
     pub to: S,
     pub triggered_by: EntityId,
@@ -71,7 +71,7 @@ macro_rules! define_states {
         }
     ) => {
         $(#[$meta])*
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
         #[derive(strum_macros::Display, strum_macros::EnumString)]
         pub enum $name {
             $(
@@ -80,7 +80,7 @@ macro_rules! define_states {
             )*
         }
         
-        impl State for $name {
+        impl $crate::state::State for $name {
             fn name(&self) -> &'static str {
                 match self {
                     $(
@@ -106,7 +106,7 @@ pub trait StateValidation<S: State> {
 
 /// Common state transitions
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TransitionRule<S: State> {
+pub struct TransitionRule<S> {
     pub from: S,
     pub to: Vec<S>,
     pub condition: Option<String>,
@@ -114,14 +114,14 @@ pub struct TransitionRule<S: State> {
 
 /// State machine configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StateMachineConfig<S: State> {
+pub struct StateMachineConfig<S> {
     pub initial_state: S,
     pub terminal_states: Vec<S>,
     pub error_states: Vec<S>,
     pub transitions: Vec<TransitionRule<S>>,
 }
 
-impl<S: State> StateMachineConfig<S> {
+impl<S: State + PartialEq> StateMachineConfig<S> {
     /// Check if a transition is valid according to the rules
     pub fn is_valid_transition(&self, from: &S, to: &S) -> bool {
         self.transitions.iter().any(|rule| {

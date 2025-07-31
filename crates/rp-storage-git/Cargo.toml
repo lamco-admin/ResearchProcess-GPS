@@ -1,0 +1,40 @@
+[package]
+name = "rp-storage-git"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+# Core dependencies
+rp-core = { path = "../rp-core" }
+rp-storage = { path = "../rp-storage" }
+
+# Async runtime
+async-trait.workspace = true
+tokio.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+bincode.workspace = true
+
+# Error handling
+thiserror.workspace = true
+anyhow.workspace = true
+
+# IDs and time
+uuid.workspace = true
+chrono.workspace = true
+
+# Logging
+tracing.workspace = true
+
+# Git specific dependencies
+git2 = "0.19"
+tempfile = "3.13"
+futures = "0.3"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util", "macros"] }
+tempfile = "3.13"

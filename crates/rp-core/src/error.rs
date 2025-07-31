@@ -1,7 +1,6 @@
 //! Core error types for ResearchProcess-GPS
 
 use thiserror::Error;
-use uuid::Uuid;
 
 use crate::EntityId;
 

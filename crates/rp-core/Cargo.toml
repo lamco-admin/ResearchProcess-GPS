@@ -25,6 +25,10 @@ strum_macros = "0.26"
 # Tracing
 tracing.workspace = true
 
+# Validation dependencies
+lazy_static = "1.5"
+regex = "1.11"
+
 [dev-dependencies]
 proptest.workspace = true
 quickcheck.workspace = true

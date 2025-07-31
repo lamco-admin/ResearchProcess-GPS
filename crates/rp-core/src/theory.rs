@@ -7,8 +7,8 @@ use validator::Validate;
 
 use crate::{
     define_states,
-    entity::{Entity, EntityMetadata, NestableEntity},
-    state::{State, StateMachine, StateTransition},
+    entity::{EntityMetadata, NestableEntity},
+    state::{StateMachine, StateTransition},
     validation::{Validatable, ValidationResult},
     EntityId, Error, Result, impl_entity,
 };
@@ -327,7 +327,7 @@ impl Validatable for Theory {
         let mut result = ValidationResult::new();
         
         // Basic validation using validator crate
-        if let Err(e) = self.validate() {
+        if let Err(e) = <Theory as validator::Validate>::validate(self) {
             result.merge(e.into());
         }
         

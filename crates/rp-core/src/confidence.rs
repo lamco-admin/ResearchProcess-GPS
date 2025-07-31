@@ -1,12 +1,10 @@
 //! Confidence framework - narrative-based confidence assessment
 
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 use crate::{
-    entity::{Entity, EntityMetadata},
-    validation::Validatable,
+    entity::EntityMetadata,
     EntityId, impl_entity, impl_validatable,
 };
 

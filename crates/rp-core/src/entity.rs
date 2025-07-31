@@ -4,9 +4,8 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
-use uuid::Uuid;
 
-use crate::{EntityId, Error, Result, Validatable};
+use crate::{EntityId, Result, Validatable};
 
 /// Core trait for all ResearchProcess-GPS entities
 #[async_trait]
@@ -138,8 +137,8 @@ impl EntityMetadata {
 #[macro_export]
 macro_rules! impl_entity {
     ($type:ty, $entity_type:expr) => {
-        impl Entity for $type {
-            fn id(&self) -> EntityId {
+        impl $crate::entity::Entity for $type {
+            fn id(&self) -> $crate::EntityId {
                 self.metadata.id
             }
             
@@ -147,19 +146,19 @@ macro_rules! impl_entity {
                 $entity_type
             }
             
-            fn created_by(&self) -> EntityId {
+            fn created_by(&self) -> $crate::EntityId {
                 self.metadata.created_by
             }
             
-            fn created_at(&self) -> DateTime<Utc> {
+            fn created_at(&self) -> chrono::DateTime<chrono::Utc> {
                 self.metadata.created_at
             }
             
-            fn modified_by(&self) -> EntityId {
+            fn modified_by(&self) -> $crate::EntityId {
                 self.metadata.modified_by
             }
             
-            fn modified_at(&self) -> DateTime<Utc> {
+            fn modified_at(&self) -> chrono::DateTime<chrono::Utc> {
                 self.metadata.modified_at
             }
             
@@ -167,8 +166,8 @@ macro_rules! impl_entity {
                 self.metadata.is_active
             }
             
-            fn as_entity(&self) -> EntityData {
-                EntityData {
+            fn as_entity(&self) -> $crate::entity::EntityData {
+                $crate::entity::EntityData {
                     id: self.metadata.id,
                     entity_type: $entity_type.to_string(),
                     created_by: self.metadata.created_by,

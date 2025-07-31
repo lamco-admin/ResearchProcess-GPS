@@ -3,9 +3,11 @@
 ## Core Concept
 
 Each reference to a person in evidence creates an **IdentityPersona**. These can be:
-- Grouped together when possibly the same person
-- Promoted to **Person** status when research concludes
-- Demoted back to IdentityPersona if new evidence emerges
+- Grouped together when possibly the same person (through nesting)
+- Progress through research states from Reference → Working → Hypothesis → Concluded
+- Be challenged and moved back to earlier states if new evidence emerges
+
+**Note**: There is no separate "Person" entity - IdentityPersona serves all purposes through state transitions.
 
 ## Example 1: Bob/Robert Jones Research
 
@@ -101,22 +103,29 @@ robert_identity.add_evidence_reference(
 )
 ```
 
-### Step 4: Promote to Person
+### Step 4: Conclude Identity Through State Transition
 
 ```python
-# Research concludes they're the same person
-robert_jones_person = Person.from_identities(
-    identities=[bob_identity, robert_identity],
-    primary=robert_identity,
+# Research concludes they're the same person - merge identities through nesting
+robert_identity.add_nested_identity(
+    bob_identity, 
+    confidence=0.95,
     rationale="Multiple evidence sources confirm Robert 'Bob' Jones lived next to Edith McIntosh"
 )
 
-# Person now has consolidated information
-print(robert_jones_person.all_names)  
+# Transition to concluded state
+robert_identity.transition_to_state(
+    IdentityState.CONCLUDED,
+    rationale="Research complete - confirmed same person through multiple sources"
+)
+
+# Now can access consolidated information and add relationships
+print(robert_identity.get_all_names())  
 # ["Bob", "Robert Jones", "Robert 'Bob' Jones"]
 
-print(robert_jones_person.validated_attributes)
-# {"occupation": "Farmer", "nickname": "Bob", "residence": "Next to McIntosh"}
+# Can now add facts and relationships since concluded
+robert_identity.add_fact(occupation_fact_id)
+robert_identity.add_relationship(spouse_relationship_id)
 ```
 
 ## Example 2: Complex Identity Resolution
@@ -152,15 +161,16 @@ john_group = IdentityGroup(
 )
 ```
 
-## Example 3: Demotion Scenario
+## Example 3: Challenge and State Transition Scenario
 
 ```python
-# Previously concluded person
-mary_jones_person = Person(
+# Previously concluded identity
+mary_jones = IdentityPersona(
     primary_name="Mary Jones",
-    birth_date=date(1820, 1, 1),
-    validated_attributes={"parents": "James and Sarah Jones"}
+    state=IdentityState.CONCLUDED
 )
+mary_jones.add_fact(birth_1820_fact_id)
+mary_jones.add_fact(parents_james_sarah_fact_id)
 
 # New evidence challenges conclusion
 conflicting_evidence_id = uuid4()
@@ -177,14 +187,27 @@ mary_1822.add_evidence_reference(
     }
 )
 
-# Demote person back to identities
-original_identities = mary_jones_person.demote_to_identities(
-    reason="Conflicting birth and parentage information"
+# Challenge the concluded identity - transition back to working state
+mary_jones.transition_to_state(
+    IdentityState.CHALLENGED,
+    reason="Conflicting birth and parentage information found"
 )
 
-# Now have multiple identity groups to research
-mary_group_1 = IdentityGroup(group_name="Mary Jones b.1820")
-mary_group_2 = IdentityGroup(group_name="Mary Jones b.1822")
+# Move to working state to resolve conflict
+mary_jones.transition_to_state(
+    IdentityState.WORKING,
+    reason="Need to analyze conflicting evidence"
+)
+
+# Can no longer add facts/relationships until resolved
+# mary_jones.add_relationship(spouse_id)  # Would fail - not concluded
+
+# Create analysis to resolve the conflict
+conflict_analysis = Analysis(
+    analysis_type=AnalysisType.CONFLICT_RESOLUTION,
+    scope="Resolve Mary Jones birth date conflict"
+)
+mary_jones.analysis_refs.append(conflict_analysis.id)
 ```
 
 ## Example 4: Placeholder Identities
@@ -220,25 +243,24 @@ unknown_mother.primary_name = "Elizabeth Brown (mother of John)"
 
 ## Key Workflows
 
-### 1. Evidence → Identity → Person
+### 1. Evidence → Identity → Concluded Identity
 ```
-Evidence (census) → IdentityPersona ("John Smith") → 
-Evidence (birth) → IdentityPersona ("John S.") →
-Group as possibly same → Research → Promote to Person
+Evidence (census) → IdentityPersona ("John Smith", state=Reference) → 
+Evidence (birth) → IdentityPersona ("John S.", state=Reference) →
+Group through nesting → Research → Transition to Concluded state
 ```
 
-### 2. Person → Identity (Demotion)
+### 2. Concluded → Challenged (State Transitions)
 ```
-Person (concluded) → New conflicting evidence →
-Demote to Identities → Separate identity groups →
-Further research
+IdentityPersona (state=Concluded) → New conflicting evidence →
+Challenge → Transition to Working state → Further research
 ```
 
 ### 3. Identity Merging
 ```
 Identity A + Identity B → Same person confidence high →
-Merge into single Identity → Continue research →
-Eventually promote to Person
+Merge through nesting → Continue research →
+Eventually transition to Concluded state
 ```
 
 ### 4. Identity Splitting
@@ -349,13 +371,15 @@ john_ky.add_nested_identity(j_smith_ky, rationale="Abbreviated form")
 # Can query by location/time period through nesting structure
 ```
 
-## Benefits of This Approach
+## Benefits of This Unified Approach
 
 1. **Evidence-First**: Every identity tied to actual evidence
-2. **Flexible Research**: Can group/ungroup as needed
-3. **Clear Progression**: Evidence → Identity → Person
-4. **Reversible**: Can demote if new evidence emerges
-5. **Audit Trail**: Track all evidence and reasoning
+2. **Flexible Research**: Can group/ungroup through nesting as needed
+3. **State-Based Progression**: Reference → Working → Hypothesis → Concluded
+4. **Reversible States**: Can challenge and move back to earlier states
+5. **Audit Trail**: Track all evidence, reasoning, and state transitions
 6. **Supports Uncertainty**: Work with possibilities before concluding
 7. **Unlimited Nesting**: Organize as complex as research requires
-8. **Multiple Hierarchies**: Same identity can be in different groupings
+8. **Single Entity Model**: No confusion between IdentityPersona and Person
+9. **Behavioral States**: Concluded identities can have facts/relationships
+10. **Multiple Hierarchies**: Same identity can be in different groupings
