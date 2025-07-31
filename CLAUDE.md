@@ -4,17 +4,39 @@
 **Type**: Research Management & GPS Integration  
 **Created**: January 2025  
 
+## 🚨 MANDATORY REQUIREMENTS - READ FIRST 🚨
+
+### 1. NO_FALLBACK_POLICY (ZERO TOLERANCE)
+**THIS IS NON-NEGOTIABLE - VIOLATIONS WILL FAIL CODE REVIEW**
+- **Location**: `/home/greg/ai-tools/docs/standards/NO_FALLBACK_POLICY.md`  
+- **Requirement**: ALL errors must be handled explicitly
+- **Zero tolerance for**:
+  - Silent fallbacks
+  - Degraded operation
+  - Default assumptions
+  - Swallowing errors
+  - Optional chaining without explicit handling
+- **Every operation must**: Succeed completely OR fail explicitly with clear error
+
+### 2. TIMESTAMP REQUIREMENTS FOR DOCUMENTATION
+**MANDATORY for all session documentation**:
+1. **Always check current date/time** before creating any document:
+   ```bash
+   date "+%Y-%m-%d %H:%M:%S %Z"
+   ```
+2. **Include timestamp in ALL document filenames**:
+   - Format: `DOCUMENT_NAME_YYYY_MM_DD_HHMM_TIMEZONE.md`
+   - Example: `HANDOVER_2025_07_31_2218_EEST.md`
+3. **Include timestamp in document header**:
+   ```markdown
+   ### Timestamp: 2025-07-31 22:18:00 EEST
+   ```
+
 ## 🎯 PROJECT CONTEXT
 
 ResearchProcess-GPS is a comprehensive research management system that combines process tracking with geographic information system (GPS) capabilities for location-based research projects.
 
 ## 📐 CRITICAL STANDARDS
-
-### NO FALLBACK POLICY (MANDATORY)
-
-**Location**: `/home/greg/ai-tools/docs/standards/NO_FALLBACK_POLICY.md`  
-**Status**: Zero tolerance - all systems must fail explicitly  
-**Key Rule**: No silent fallbacks, no degraded operation, no assumptions
 
 ### AUTHORITY MATRIX
 
@@ -80,6 +102,31 @@ ResearchProcess-GPS/
 - Spatial data processing
 
 ## 🚀 DEVELOPMENT GUIDELINES
+
+### NO_FALLBACK_POLICY Implementation Examples
+
+**❌ WRONG - Silent failures**:
+```rust
+let result = operation().unwrap_or_default();  // NO!
+let data = fetch().ok()?;                      // NO!
+if let Ok(value) = risky_op() { value } else { Default::default() } // NO!
+```
+
+**✅ CORRECT - Explicit error handling**:
+```rust
+let result = operation().map_err(|e| {
+    error!("Operation failed: {}", e);
+    ApiError::Internal(e.to_string())
+})?;
+
+match risky_op() {
+    Ok(value) => Ok(value),
+    Err(e) => {
+        error!("Risky operation failed: {}", e);
+        return Err(ApiError::from(e));
+    }
+}
+```
 
 ### Tool Usage Preferences
 
@@ -154,5 +201,12 @@ npm test                 # or appropriate test command
 3. **API Keys**: Never commit API keys or credentials to the repository
 
 ---
+
+## 🔴 FINAL REMINDERS
+
+1. **NO_FALLBACK_POLICY**: Zero violations tolerated. Every error must be handled explicitly.
+2. **TIMESTAMPS**: Always check date/time and use timestamps in document filenames.
+3. **TESTING**: All code must be tested before committing.
+4. **DOCUMENTATION**: Keep comprehensive records of all work done.
 
 *ResearchProcess-GPS - Comprehensive Research Process Management with GPS Integration*
