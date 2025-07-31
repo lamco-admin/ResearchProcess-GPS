@@ -129,6 +129,7 @@ pub enum Severity {
 
 /// Entity types that rules can apply to
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(utoipa::ToSchema)]
 pub enum EntityType {
     // Layer 1 - Core Data Model (9 entities)
     Analysis,

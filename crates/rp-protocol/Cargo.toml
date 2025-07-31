@@ -34,5 +34,8 @@ bytes = "1.7"
 futures = "0.3"
 base64 = "0.22"
 
+# OpenAPI documentation
+utoipa = { version = "5", features = ["chrono", "uuid"] }
+
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util", "macros"] }

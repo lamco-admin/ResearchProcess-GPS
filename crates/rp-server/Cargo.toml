@@ -56,6 +56,10 @@ dotenv = "0.15"
 # Authentication
 lazy_static = "1.5"
 
+# OpenAPI documentation
+utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
+utoipa-swagger-ui = { version = "8", features = ["axum"] }
+
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util", "macros"] }
 hyper = { version = "1.5", features = ["client"] }

@@ -1,9 +1,10 @@
 //! Pagination utilities and types
 
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// Pagination parameters
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PaginationParams {
     /// Maximum number of items to return
     #[serde(default = "default_page_size")]

@@ -6,9 +6,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 use uuid::Uuid;
+use utoipa::ToSchema;
 
 /// Generic entity request wrapper for CRUD operations
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct EntityRequest<T> {
     pub entity_type: EntityType,
     pub data: T,
@@ -17,7 +18,7 @@ pub struct EntityRequest<T> {
 }
 
 /// Create entity request
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct CreateEntityRequest {
     pub entity_type: EntityType,
     pub data: JsonValue,
@@ -26,7 +27,7 @@ pub struct CreateEntityRequest {
 }
 
 /// Update entity request
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct UpdateEntityRequest {
     pub entity_type: EntityType,
     pub data: JsonValue,

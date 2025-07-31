@@ -8,8 +8,8 @@ use validator::Validate;
 
 use crate::{
     work_product::{WorkProduct, WorkProductType},
-    entity::{Entity, EntityData},
-    EntityId, impl_validatable,
+    entity::{Entity, NestableEntity, EntityData},
+    EntityId, impl_validatable, Result,
 };
 
 /// Type of proof document
@@ -478,6 +478,66 @@ impl Entity for ProofStatement {
             data: serde_json::to_value(self)
                 .expect("ProofStatement serialization should never fail"),
         }
+    }
+}
+
+// Implement NestableEntity trait for ProofStatement
+#[async_trait]
+impl NestableEntity for ProofStatement {
+    fn children(&self) -> Vec<EntityId> {
+        // ProofStatement can have child sections and supporting analyses
+        let mut children = Vec::new();
+        
+        // Add supporting analyses
+        children.extend_from_slice(&self.supporting_analyses);
+        
+        // Add evidence matrix and timeline if present
+        if let Some(matrix_id) = self.evidence_matrix_id {
+            children.push(matrix_id);
+        }
+        if let Some(timeline_id) = self.timeline_id {
+            children.push(timeline_id);
+        }
+        
+        children
+    }
+    
+    fn can_contain(&self, entity_type: &str) -> bool {
+        // ProofStatement can contain analyses and other work products
+        matches!(entity_type, "Analysis" | "WorkProduct")
+    }
+    
+    async fn add_child(&mut self, child_id: EntityId) -> Result<()> {
+        // Add as supporting analysis if not already present
+        if !self.supporting_analyses.contains(&child_id) {
+            self.supporting_analyses.push(child_id);
+            self.work_product.metadata.update(self.work_product.metadata.modified_by);
+        }
+        Ok(())
+    }
+    
+    async fn remove_child(&mut self, child_id: EntityId) -> Result<bool> {
+        let initial_len = self.supporting_analyses.len();
+        self.supporting_analyses.retain(|&id| id != child_id);
+        
+        // Also check evidence matrix and timeline
+        if self.evidence_matrix_id == Some(child_id) {
+            self.evidence_matrix_id = None;
+            self.work_product.metadata.update(self.work_product.metadata.modified_by);
+            return Ok(true);
+        }
+        
+        if self.timeline_id == Some(child_id) {
+            self.timeline_id = None;
+            self.work_product.metadata.update(self.work_product.metadata.modified_by);
+            return Ok(true);
+        }
+        
+        let removed = self.supporting_analyses.len() < initial_len;
+        if removed {
+            self.work_product.metadata.update(self.work_product.metadata.modified_by);
+        }
+        Ok(removed)
     }
 }
 
