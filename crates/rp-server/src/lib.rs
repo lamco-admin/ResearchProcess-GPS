@@ -5,6 +5,7 @@ pub mod handlers;
 pub mod middleware;
 pub mod notify;
 pub mod state;
+pub mod auth;
 
 pub use config::Config;
 pub use error::{ApiError, ApiResult};
