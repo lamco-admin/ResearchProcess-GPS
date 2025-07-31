@@ -11,7 +11,7 @@
 pub mod backend;
 pub mod connection;
 pub mod transaction;
-pub mod event_transaction_fixed;
+pub mod event_sourced_wrapper;
 pub mod query;
 pub mod vector;
 pub mod error;
@@ -20,7 +20,7 @@ pub mod config;
 pub use backend::PostgresBackend;
 pub use connection::ConnectionPool;
 pub use transaction::PostgresTransaction;
-pub use event_transaction_fixed::EventSourcedTransaction;
+pub use event_sourced_wrapper::EventSourcedTransaction;
 pub use error::{PostgresError, PostgresResult};
 pub use config::PostgresConfig;
 
