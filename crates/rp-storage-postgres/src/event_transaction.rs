@@ -62,16 +62,14 @@ impl EventSourcedTransaction {
                     // Theory created
                     let question = entity.data.get("question")
                         .and_then(|v| v.as_str())
-                        .unwrap_or("")
-                        .to_string();
+                        .ok_or_else(|| StorageError::ValidationError("Theory missing required field: question".to_string()))?;
                     let hypothesis = entity.data.get("hypothesis")
                         .and_then(|v| v.as_str())
-                        .unwrap_or("")
-                        .to_string();
+                        .ok_or_else(|| StorageError::ValidationError("Theory missing required field: hypothesis".to_string()))?;
                     
                     Some(DomainEvent::Theory(TheoryEvent::Created {
-                        question,
-                        hypothesis,
+                        question: question.to_string(),
+                        hypothesis: hypothesis.to_string(),
                         researcher_id: entity.created_by,
                     }))
                 } else if let Some(old) = old_entity {
@@ -82,9 +80,19 @@ impl EventSourcedTransaction {
                     if old_state != new_state {
                         if let (Some(from), Some(to)) = (old_state, new_state) {
                             // Parse states - this is simplified, you'd need proper deserialization
+                            // Parse states properly - fail if invalid
+                            let from_state = serde_json::from_str::<TheoryState>(&format!("\"{}\"", from))
+                                .map_err(|e| StorageError::ValidationError(
+                                    format!("Invalid from_state '{}': {}", from, e)
+                                ))?;
+                            let to_state = serde_json::from_str::<TheoryState>(&format!("\"{}\"", to))
+                                .map_err(|e| StorageError::ValidationError(
+                                    format!("Invalid to_state '{}': {}", to, e)
+                                ))?;
+                            
                             Some(DomainEvent::Theory(TheoryEvent::StateChanged {
-                                from_state: serde_json::from_str(&format!("\"{}\"", from)).unwrap_or(TheoryState::Exploring),
-                                to_state: serde_json::from_str(&format!("\"{}\"", to)).unwrap_or(TheoryState::Exploring),
+                                from_state,
+                                to_state,
                                 reason: "State transition".to_string(),
                             }))
                         } else {
@@ -138,12 +146,11 @@ impl EventSourcedTransaction {
                 if !exists {
                     let title = entity.data.get("title")
                         .and_then(|v| v.as_str())
-                        .unwrap_or("Untitled")
-                        .to_string();
+                        .ok_or_else(|| StorageError::ValidationError("Source missing required field: title".to_string()))?;
                     
                     Some(DomainEvent::Source(SourceEvent::Created {
                         source_type: rp_core::SourceType::Document, // Would need proper parsing
-                        title,
+                        title: title.to_string(),
                         researcher_id: entity.created_by,
                     }))
                 } else {
@@ -158,16 +165,16 @@ impl EventSourcedTransaction {
                 if !exists {
                     let source_id = entity.data.get("source_id")
                         .and_then(|v| v.as_str())
-                        .and_then(|s| Uuid::parse_str(s).ok())
-                        .unwrap_or_default();
+                        .ok_or_else(|| StorageError::ValidationError("Evidence missing required field: source_id".to_string()))?;
+                    let source_id = Uuid::parse_str(source_id)
+                        .map_err(|e| StorageError::ValidationError(format!("Invalid source_id UUID: {}", e)))?;
                     let original_text = entity.data.get("original_text")
                         .and_then(|v| v.as_str())
-                        .unwrap_or("")
-                        .to_string();
+                        .ok_or_else(|| StorageError::ValidationError("Evidence missing required field: original_text".to_string()))?;
                     
                     Some(DomainEvent::Evidence(EvidenceEvent::Extracted {
                         source_id,
-                        original_text,
+                        original_text: original_text.to_string(),
                         researcher_id: entity.created_by,
                     }))
                 } else {
@@ -182,11 +189,10 @@ impl EventSourcedTransaction {
                 if !exists {
                     let name = entity.data.get("name")
                         .and_then(|v| v.as_str())
-                        .unwrap_or("Unknown")
-                        .to_string();
+                        .ok_or_else(|| StorageError::ValidationError("Researcher missing required field: name".to_string()))?;
                     
                     Some(DomainEvent::Researcher(ResearcherEvent::Created {
-                        name,
+                        name: name.to_string(),
                         researcher_type: "Individual".to_string(),
                     }))
                 } else {
@@ -201,11 +207,10 @@ impl EventSourcedTransaction {
                 if !exists {
                     let name = entity.data.get("name")
                         .and_then(|v| v.as_str())
-                        .unwrap_or("Default Workspace")
-                        .to_string();
+                        .ok_or_else(|| StorageError::ValidationError("Workspace missing required field: name".to_string()))?;
                     
                     Some(DomainEvent::Workspace(WorkspaceEvent::Created {
-                        name,
+                        name: name.to_string(),
                         owner_id: entity.created_by,
                     }))
                 } else {
@@ -290,8 +295,7 @@ impl StorageTrait for EventSourcedTransaction {
         
         // Generate and publish event
         if let Some(event) = self.generate_event(entity, exists, old_entity.as_ref()).await? {
-            let version = self.event_store.get_aggregate_version(entity.id).await
-                .unwrap_or(0);
+            let version = self.event_store.get_aggregate_version(entity.id).await?;
             
             let metadata = EventBuilder::new(
                 entity.id,
@@ -470,7 +474,9 @@ impl StorageTrait for EventSourcedTransaction {
     ) -> StorageResult<Vec<StorageEntity>> {
         debug!("Listing entities of type: {}", entity_type);
         
-        let limit = limit.unwrap_or(1000) as i64;
+        // Explicit pagination constant
+        const DEFAULT_LIST_LIMIT: usize = 1000;
+        let limit = limit.unwrap_or(DEFAULT_LIST_LIMIT) as i64; // Explicit default limit
         
         struct EntityRow {
             id: Uuid,

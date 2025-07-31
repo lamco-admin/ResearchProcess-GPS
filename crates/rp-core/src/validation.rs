@@ -129,7 +129,8 @@ impl ValidationContext {
     pub fn with_value(mut self, key: impl Into<String>, value: impl Serialize) -> Self {
         self.values.insert(
             key.into(),
-            serde_json::to_value(value).unwrap_or(serde_json::Value::Null),
+            serde_json::to_value(value)
+                .expect("ValidationResult value serialization should never fail"),
         );
         self
     }
@@ -160,7 +161,7 @@ impl From<ValidationErrors> for ValidationResult {
                     error.code.to_string(),
                     error.message.as_ref()
                         .map(|m| m.to_string())
-                        .unwrap_or_else(|| format!("Validation failed for {}", field)),
+                        .unwrap_or_else(|| format!("Validation failed for {}", field)), // Default message when error has none
                 );
             }
         }

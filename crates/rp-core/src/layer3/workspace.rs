@@ -449,25 +449,25 @@ impl Entity for Workspace {
     fn created_by(&self) -> EntityId {
         self.entity_metadata.as_ref()
             .map(|em| em.created_by.clone())
-            .unwrap_or_else(|| self.metadata.owner.clone())
+            .unwrap_or_else(|| self.metadata.owner.clone()) // Workspace uses owner as created_by fallback
     }
     
     fn created_at(&self) -> DateTime<Utc> {
         self.entity_metadata.as_ref()
             .map(|em| em.created_at)
-            .unwrap_or(self.metadata.created_at)
+            .unwrap_or(self.metadata.created_at) // Workspace tracks creation time independently
     }
     
     fn modified_by(&self) -> EntityId {
         self.entity_metadata.as_ref()
             .map(|em| em.modified_by.clone())
-            .unwrap_or_else(|| self.metadata.owner.clone())
+            .unwrap_or_else(|| self.metadata.owner.clone()) // Workspace uses owner as modified_by fallback
     }
     
     fn modified_at(&self) -> DateTime<Utc> {
         self.entity_metadata.as_ref()
             .map(|em| em.modified_at)
-            .unwrap_or(self.metadata.modified_at)
+            .unwrap_or(self.metadata.modified_at) // Workspace tracks modification time independently
     }
     
     fn is_active(&self) -> bool {
@@ -484,7 +484,8 @@ impl Entity for Workspace {
             modified_at: self.modified_at(),
             is_active: self.is_active(),
             version: self.entity_metadata.as_ref().map(|em| em.version),
-            data: serde_json::to_value(self).unwrap_or(serde_json::Value::Null),
+            data: serde_json::to_value(self)
+                .expect("Workspace serialization should never fail"),
         }
     }
 }

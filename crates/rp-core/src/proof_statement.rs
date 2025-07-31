@@ -407,7 +407,7 @@ impl ProofStatement {
         // Must have all standard sections with content
         let required_sections = ["question", "sources", "evidence", "analysis", "conclusion"];
         let has_sections = required_sections.iter().all(|&key| {
-            self.get_section(key).map(|s| !s.content.is_empty()).unwrap_or(false)
+            self.get_section(key).map(|s| !s.content.is_empty()).unwrap_or(false) // Missing section = not ready
         });
         
         // Must have evidence
@@ -475,7 +475,8 @@ impl Entity for ProofStatement {
             modified_at: self.modified_at(),
             is_active: self.is_active(),
             version: Some(self.work_product.metadata.version),
-            data: serde_json::to_value(self).unwrap_or_default(),
+            data: serde_json::to_value(self)
+                .expect("ProofStatement serialization should never fail"),
         }
     }
 }

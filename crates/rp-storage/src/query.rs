@@ -226,7 +226,8 @@ impl Filter {
     pub fn eq(field: impl Into<String>, value: impl Serialize) -> Self {
         Self::Eq {
             field: field.into(),
-            value: serde_json::to_value(value).unwrap_or(JsonValue::Null),
+            value: serde_json::to_value(value)
+                .expect("Filter value serialization should never fail"),
         }
     }
     
@@ -234,7 +235,8 @@ impl Filter {
     pub fn ne(field: impl Into<String>, value: impl Serialize) -> Self {
         Self::Ne {
             field: field.into(),
-            value: serde_json::to_value(value).unwrap_or(JsonValue::Null),
+            value: serde_json::to_value(value)
+                .expect("Filter value serialization should never fail"),
         }
     }
     
@@ -244,7 +246,8 @@ impl Filter {
             field: field.into(),
             values: values
                 .into_iter()
-                .map(|v| serde_json::to_value(v).unwrap_or(JsonValue::Null))
+                .map(|v| serde_json::to_value(v)
+                    .expect("Filter value serialization should never fail"))
                 .collect(),
         }
     }

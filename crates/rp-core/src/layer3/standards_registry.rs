@@ -369,7 +369,7 @@ impl StandardsRegistry {
                     .filter_map(|k| self.standards.get(k))
                     .collect()
             })
-            .unwrap_or_default()
+            .unwrap_or_default() // Return empty vec when no standards match tag
     }
     
     /// Gets standards by tag

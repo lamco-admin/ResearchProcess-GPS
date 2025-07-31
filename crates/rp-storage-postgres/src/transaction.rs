@@ -227,7 +227,7 @@ impl StorageTrait for PostgresTransaction {
             )
             .bind(entity_type)
             .bind(limit as i64)
-            .bind(offset.unwrap_or(0) as i64);
+            .bind(offset.unwrap_or(0) as i64); // Default offset of 0 is acceptable for pagination
         }
         
         let rows = query

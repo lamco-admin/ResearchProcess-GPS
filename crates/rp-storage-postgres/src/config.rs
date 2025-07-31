@@ -114,7 +114,7 @@ impl PostgresConfig {
             .to_string();
         
         // Port can be optional - PostgreSQL default is 5432
-        let port = url.port().unwrap_or(5432);
+        let port = url.port().unwrap_or(5432); // PostgreSQL default port
         
         // Database name is required
         let database = url.path().trim_start_matches('/');

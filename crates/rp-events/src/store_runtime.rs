@@ -6,6 +6,12 @@ use uuid::Uuid;
 
 use crate::{DomainEvent, EventError, EventMetadata, Result};
 
+// Explicit constants for acceptable defaults
+const DEFAULT_PAGE_SIZE: i32 = 100;
+const DEFAULT_OFFSET: i32 = 0;
+const MAX_VERSION: i64 = i64::MAX;
+const INITIAL_VERSION: i64 = 1;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StoredEvent {
     pub id: Uuid,
@@ -123,7 +129,7 @@ impl PostgresEventStore {
         .fetch_one(&mut **tx)
         .await?;
         
-        result.0.ok_or_else(|| EventStoreError::Other("Failed to append event - no version returned".to_string()))
+        result.0.ok_or_else(|| EventError::Other(anyhow::anyhow!("Failed to append event - no version returned")))
     }
 }
 
@@ -159,8 +165,22 @@ impl EventStore for PostgresEventStore {
         from_version: Option<i64>,
         to_version: Option<i64>,
     ) -> Result<EventStream> {
-        let from_version = from_version.unwrap_or(1);
-        let to_version = to_version.unwrap_or(i64::MAX);
+        // Validate version range parameters
+        // Validate version range parameters
+        let from_version = from_version.unwrap_or(INITIAL_VERSION);
+        let to_version = to_version.unwrap_or(MAX_VERSION); // Max version for unbounded queries
+        
+        if from_version < 1 {
+            return Err(EventError::InvalidEventData {
+                message: format!("from_version must be >= 1, got {}", from_version)
+            });
+        }
+        
+        if to_version < from_version {
+            return Err(EventError::InvalidEventData {
+                message: format!("to_version ({}) must be >= from_version ({})", to_version, from_version)
+            });
+        }
         
         let rows = sqlx::query(
             r#"
@@ -219,8 +239,17 @@ impl EventStore for PostgresEventStore {
             })
             .collect();
         
-        let aggregate_type = events[0].aggregate_type.clone();
-        let current_version = events.last().map(|e| e.aggregate_version).unwrap_or(0);
+        let aggregate_type = events.first()
+            .ok_or_else(|| EventError::InvalidEventData {
+                message: "Event stream is empty".to_string()
+            })?
+            .aggregate_type.clone();
+        
+        let current_version = events.last()
+            .ok_or_else(|| EventError::InvalidEventData {
+                message: "Event stream is empty".to_string()
+            })?
+            .aggregate_version;
         
         Ok(EventStream {
             aggregate_id,
@@ -236,8 +265,23 @@ impl EventStore for PostgresEventStore {
         limit: Option<i32>,
         offset: Option<i32>,
     ) -> Result<Vec<StoredEvent>> {
-        let limit = limit.unwrap_or(100);
-        let offset = offset.unwrap_or(0);
+        // Use explicit constants for pagination defaults
+        // Use explicit constants for pagination defaults
+        let limit = limit.unwrap_or(DEFAULT_PAGE_SIZE);
+        let offset = offset.unwrap_or(DEFAULT_OFFSET); // Default offset for pagination
+        
+        // Validate pagination parameters
+        if limit <= 0 {
+            return Err(EventError::InvalidEventData {
+                message: format!("limit must be > 0, got {}", limit)
+            });
+        }
+        
+        if offset < 0 {
+            return Err(EventError::InvalidEventData {
+                message: format!("offset must be >= 0, got {}", offset)
+            });
+        }
         
         let rows = sqlx::query(
             r#"
@@ -304,6 +348,10 @@ impl EventStore for PostgresEventStore {
         .fetch_one(&self.pool)
         .await?;
         
+        // Return 0 for non-existent aggregates (they have no events yet)
+        // This is acceptable as it represents the initial state
+        // Return 0 for non-existent aggregates (they have no events yet)
+        // This is acceptable as it represents the initial state
         Ok(result.0.unwrap_or(0))
     }
     
@@ -339,7 +387,13 @@ impl EventStore for PostgresEventStore {
         aggregate_id: Uuid,
         max_version: Option<i64>,
     ) -> Result<Option<Snapshot>> {
-        let max_version = max_version.unwrap_or(i64::MAX);
+        let max_version = max_version.unwrap_or(MAX_VERSION); // Unbounded version search
+        
+        if max_version < 0 {
+            return Err(EventError::InvalidEventData {
+                message: format!("max_version must be >= 0, got {}", max_version)
+            });
+        }
         
         let row = sqlx::query(
             r#"

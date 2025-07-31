@@ -342,7 +342,7 @@ impl ResearchLog {
             let key = format!("{:?}", entry.entry_type);
             let current = counts.get(&key)
                 .and_then(|v| v.as_u64())
-                .unwrap_or(0);
+                .unwrap_or(0); // Entry count starts at 0
             counts.insert(key, serde_json::json!(current + 1));
         }
     }
@@ -435,7 +435,8 @@ impl Entity for ResearchLog {
             modified_at: self.work_product.metadata.modified_at,
             is_active: self.work_product.metadata.is_active,
             version: Some(self.work_product.metadata.version),
-            data: serde_json::to_value(self).unwrap_or_default(),
+            data: serde_json::to_value(self)
+                .expect("ResearchLog serialization should never fail"),
         }
     }
 }

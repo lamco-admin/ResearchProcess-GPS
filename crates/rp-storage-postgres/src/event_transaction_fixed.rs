@@ -21,6 +21,10 @@ use rp_core::prelude::*;
 
 use crate::PostgresError;
 
+// Explicit pagination constants
+const DEFAULT_LIST_LIMIT: i64 = 1000;
+const DEFAULT_LIST_OFFSET: i64 = 0;
+
 /// Event-sourced PostgreSQL transaction wrapper
 pub struct EventSourcedTransaction {
     pool: PgPool,
@@ -476,8 +480,9 @@ impl StorageTrait for EventSourcedTransaction {
         debug!("Listing entities of type: {}", entity_type);
         
         // Use explicit defaults for pagination
-        let limit = limit.map(|l| l as i64).unwrap_or(1000);
-        let offset = offset.map(|o| o as i64).unwrap_or(0);
+        // Use explicit defaults for pagination
+        let limit = limit.map(|l| l as i64).unwrap_or(DEFAULT_LIST_LIMIT);
+        let offset = offset.map(|o| o as i64).unwrap_or(DEFAULT_LIST_OFFSET); // Explicit default offset
         
         let rows = sqlx::query!(
             r#"

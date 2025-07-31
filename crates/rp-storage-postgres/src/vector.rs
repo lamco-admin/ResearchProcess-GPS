@@ -45,8 +45,12 @@ impl VectorSearchBackend for PostgresBackend {
         
         // Store metadata if provided
         if let Some(meta) = metadata {
-            let model_name = meta.get("model").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
-            let meta_json = serde_json::to_value(&meta).unwrap();
+            let model_name = meta.get("model")
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| StorageError::ConfigError("Vector metadata missing required field: model".to_string()))?
+                .to_string();
+            let meta_json = serde_json::to_value(&meta)
+                .map_err(|e| StorageError::SerializationError(format!("Failed to serialize metadata: {}", e)))?;
             
             sqlx::query(
                 r#"
@@ -114,7 +118,9 @@ impl VectorSearchBackend for PostgresBackend {
             entity_id: r.id,
             distance: r.distance,
             metadata: Some(HashMap::from([
-                ("entity_type".to_string(), r.data.get("entity_type").cloned().unwrap_or(JsonValue::Null)),
+                ("entity_type".to_string(), r.data.get("entity_type")
+                    .cloned()
+                    .unwrap_or(JsonValue::Null)), // Metadata field: null is acceptable for missing entity_type
             ])),
         }).collect())
     }

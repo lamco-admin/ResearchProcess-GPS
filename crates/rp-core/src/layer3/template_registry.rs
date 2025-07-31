@@ -557,7 +557,7 @@ impl TemplateRegistry {
                     .filter_map(|k| self.get_template(k))
                     .collect()
             })
-            .unwrap_or_default()
+            .unwrap_or_default() // Return empty vec when no templates match
     }
     
     /// Finds templates compatible with a methodology
@@ -569,7 +569,7 @@ impl TemplateRegistry {
                     .filter_map(|k| self.get_template(k))
                     .collect()
             })
-            .unwrap_or_default()
+            .unwrap_or_default() // Return empty vec when no templates match
     }
     
     /// Finds templates compatible with a work product type
@@ -581,7 +581,7 @@ impl TemplateRegistry {
                     .filter_map(|k| self.get_template(k))
                     .collect()
             })
-            .unwrap_or_default()
+            .unwrap_or_default() // Return empty vec when no templates match
     }
     
     /// Finds templates by tag
@@ -593,7 +593,7 @@ impl TemplateRegistry {
                     .filter_map(|k| self.get_template(k))
                     .collect()
             })
-            .unwrap_or_default()
+            .unwrap_or_default() // Return empty vec when no templates match
     }
     
     /// Sets a default template for a category
