@@ -296,52 +296,23 @@ pub async fn list_entities(
 
 // Helper struct for SQL queries
 #[derive(sqlx::FromRow)]
-struct EntityRow {
-    id: Uuid,
-    entity_type: String,
-    data: serde_json::Value,
+pub(crate) struct EntityRow {
+    pub id: Uuid,
+    pub entity_type: String,
+    pub data: serde_json::Value,
     #[allow(dead_code)]
-    binary_data: Option<Vec<u8>>,
-    created_by: Uuid,
-    created_at: chrono::DateTime<chrono::Utc>,
-    updated_at: chrono::DateTime<chrono::Utc>,
-    version: i64,
+    pub binary_data: Option<Vec<u8>>,
+    pub created_by: Uuid,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub version: i64,
 }
 
 // Helper functions to convert between EntityType and String
 fn entity_type_to_string(entity_type: &EntityType) -> String {
-    match entity_type {
-        EntityType::Theory => "Theory",
-        EntityType::Evidence => "Evidence",
-        EntityType::Source => "Source",
-        EntityType::Repository => "Repository",
-        EntityType::WorkProduct => "WorkProduct",
-        EntityType::ProofStatement => "ProofStatement",
-        EntityType::Researcher => "Researcher",
-        EntityType::ResearchLog => "ResearchLog",
-        EntityType::Citation => "Citation",
-        EntityType::Fact => "Fact",
-        EntityType::IdentityPersona => "IdentityPersona",
-        EntityType::Relationship => "Relationship",
-    }.to_string()
+    crate::entity_type_mapper::entity_type_to_string(entity_type).to_string()
 }
 
 fn string_to_entity_type(s: &str) -> EntityType {
-    match s {
-        "Theory" => EntityType::Theory,
-        "Evidence" => EntityType::Evidence,
-        "Source" => EntityType::Source,
-        "Repository" => EntityType::Repository,
-        "WorkProduct" => EntityType::WorkProduct,
-        "ProofStatement" => EntityType::ProofStatement,
-        "Researcher" => EntityType::Researcher,
-        "ResearchLog" => EntityType::ResearchLog,
-        "Citation" => EntityType::Citation,
-        "Fact" => EntityType::Fact,
-        "IdentityPersona" => EntityType::IdentityPersona,
-        "Relationship" => EntityType::Relationship,
-        // For Layer 3 workspace entities not in the enum, default to Theory
-        // This is a limitation of the current EntityType enum
-        _ => EntityType::Theory,
-    }
+    crate::entity_type_mapper::parse_entity_type(s)
 }
