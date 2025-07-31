@@ -19,6 +19,12 @@ pub mod citation;
 pub mod fact;
 pub mod relationship;
 pub mod location;
+pub mod work_product;
+pub mod research_log;
+pub mod research_session;
+pub mod research_activity;
+pub mod proof_statement;
+pub mod evidence_analysis;
 
 pub use entity::*;
 pub use error::*;
@@ -44,4 +50,10 @@ pub mod prelude {
     pub use crate::fact::{Fact, FactState, FactType, FactValue, DatePrecision, LocationReference};
     pub use crate::relationship::{Relationship, RelationshipState, RelationshipType, RelationshipPeriod};
     pub use crate::location::{Location, LocationType, Coordinates, AlternativeName};
+    pub use crate::work_product::{WorkProduct, WorkProductState, WorkProductType, ValidationStatus, ComplianceResult, WorkProductReview};
+    pub use crate::research_log::{ResearchLog, LogType, LogEntryType, ResearchLogEntry, ResearchCoverage};
+    pub use crate::research_session::{ResearchSession, SessionType, SessionState};
+    pub use crate::research_activity::{ResearchActivity, ActivityType, ActivityResult, ResultQuality};
+    pub use crate::proof_statement::{ProofStatement, ProofType, ProofSection, GPSElement, ConflictDescription, ProofAudience};
+    pub use crate::evidence_analysis::{EvidenceAnalysis, AnalysisMethod, EvidenceAnalysisItem, EvidenceType, Correlation, Pattern, Anomaly};
 }
