@@ -3,10 +3,15 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
+use lazy_static::lazy_static;
+use regex::Regex;
+
+lazy_static! {
+    static ref ORCID_REGEX: Regex = Regex::new(r"^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$").unwrap();
+}
 
 use crate::{
-    entity::{Entity, EntityMetadata},
-    validation::Validatable,
+    entity::EntityMetadata,
     EntityId, impl_entity, impl_validatable,
 };
 
@@ -26,7 +31,7 @@ pub struct Researcher {
     pub email: Option<String>,
     
     /// ORCID identifier for academic attribution
-    #[validate(regex = "^\\d{4}-\\d{4}-\\d{4}-\\d{3}[\\dX]$")]
+    #[validate(regex(path = "*ORCID_REGEX"))]
     pub orcid: Option<String>,
     
     /// Professional credentials (e.g., "CG", "AG", "PhD")

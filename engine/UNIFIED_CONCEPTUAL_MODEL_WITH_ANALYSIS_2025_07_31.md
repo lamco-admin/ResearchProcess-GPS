@@ -137,60 +137,50 @@ class Analysis(NestableBaseEntity):
     contributors: List[UUID] = field(default_factory=list)
 ```
 
-### 4. IdentityPersona (Dual-Named: Identity OR Persona)
+### 4. IdentityPersona (Unified Person Entity)
 ```python
 class IdentityPersona(NestableBaseEntity):
     """
-    Non-conclusive state: evidence references
-    Unlimited nesting for variants and research organization
+    Unified entity for all person references - from hypothetical to concluded.
+    Replaces separate Person entity - uses states to track research progression.
+    Unlimited nesting for variants and research organization.
     """
     state: IdentityState
-    # REFERENCE → WORKING → HYPOTHESIS → CANDIDATE
+    # REFERENCE → WORKING → HYPOTHESIS → CONCLUDED → VERIFIED → PUBLISHED → CHALLENGED
     
+    # Core identity
+    primary_name: str
+    identity_type: IdentityType  # NAMED, DESCRIBED, RELATIONSHIP, etc.
+    
+    # Evidence references
     evidence_references: List[EvidenceReference]
     
-    # Identity-specific analyses (NEW)
-    identity_analyses: List[Analysis] = field(default_factory=list)
-    # Can contain:
-    # - Identity resolution analyses
-    # - Elimination analyses (proving NOT same person)
-    # - Correlation analyses with other identities
+    # Related research entities (not embedded - references only)
+    theory_refs: List[UUID] = field(default_factory=list)
+    confidence_refs: List[UUID] = field(default_factory=list)
+    analysis_refs: List[UUID] = field(default_factory=list)
     
-    # Can become Person when concluded
-    promotion_eligible: bool
-    promotion_criteria: PromotionConfig
+    # Facts and relationships (only valid when concluded)
+    fact_refs: List[UUID] = field(default_factory=list)
+    relationship_refs: List[UUID] = field(default_factory=list)
+    
+    # Nesting support for identity grouping
+    parent_identity: Optional[UUID] = None
+    child_identities: List[UUID] = field(default_factory=list)
     
     # Attribution
     discovered_by: UUID  # Researcher ID
+    
+    def is_concluded(self) -> bool:
+        """Check if this identity can have relationships, facts, etc."""
+        return self.state in [IdentityState.CONCLUDED, IdentityState.VERIFIED, IdentityState.PUBLISHED]
+    
+    def can_have_relationships(self) -> bool:
+        """Only concluded identities can have confirmed relationships"""
+        return self.is_concluded()
 ```
 
-### 5. Person (Concluded Identity)
-```python
-class Person(NestableBaseEntity):
-    """
-    Promoted from IdentityPersona when research concludes
-    Additional properties only available after conclusion
-    """
-    state: PersonState
-    # CONCLUDED → ACCEPTED → PUBLISHED → CHALLENGED
-    
-    source_identities: List[UUID]  # IdentityPersonas that created this
-    
-    # Conclusion analysis (NEW)
-    conclusion_analysis: Optional[UUID]  # Analysis that justified promotion
-    
-    # Only Persons can have confirmed relationships
-    confirmed_relationships: List[UUID]
-    
-    # Can be demoted if new evidence emerges
-    demotion_triggers: DemotionConfig
-    
-    # Attribution
-    concluded_by: UUID  # Researcher ID
-    conclusion_date: datetime
-```
-
-### 6. Source (Hierarchical)
+### 5. Source (Hierarchical)
 ```python
 class Source(NestableBaseEntity):
     """
@@ -211,7 +201,7 @@ class Source(NestableBaseEntity):
     template_fields: Dict[str, str]
 ```
 
-### 7. Evidence (First-Class Research Object)
+### 6. Evidence (First-Class Research Object)
 ```python
 class Evidence(NestableBaseEntity):
     """
@@ -233,7 +223,7 @@ class Evidence(NestableBaseEntity):
     extraction_date: datetime
 ```
 
-### 8. Citation (Flexible Relationship)
+### 7. Citation (Flexible Relationship)
 ```python
 class Citation(NestableBaseEntity):
     """
@@ -255,7 +245,7 @@ class Citation(NestableBaseEntity):
     cited_elements: List[CitedElement]
 ```
 
-### 9. Confidence (Revolutionary Container)
+### 8. Confidence (Revolutionary Container)
 ```python
 class Confidence(NestableBaseEntity):
     """
@@ -290,7 +280,7 @@ class Confidence(NestableBaseEntity):
         date: datetime
 ```
 
-### 10. Fact (Unified Events/Attributes)
+### 9. Fact (Unified Events/Attributes)
 ```python
 class Fact(NestableBaseEntity):
     """
@@ -313,7 +303,7 @@ class Fact(NestableBaseEntity):
     participants: List[FactParticipant]
 ```
 
-### 11. ResearchLog (Process Documentation)
+### 10. ResearchLog (Process Documentation)
 ```python
 class ResearchLog(NestableBaseEntity):
     """
@@ -422,11 +412,13 @@ confidence.supporting_analyses.append(
 
 ### 3. Nested in IdentityPersona
 ```python
-persona.identity_analyses.append(
-    Analysis(
-        analysis_type=AnalysisType.IDENTITY_RESOLUTION,
-        scope={"question": "Same as John in 1850 census?"}
-    )
+# IdentityPersona references analyses rather than containing them
+identity_persona.analysis_refs.append(analysis.id)
+
+# Analysis for identity resolution
+identity_analysis = Analysis(
+    analysis_type=AnalysisType.IDENTITY_RESOLUTION,
+    scope={"question": "Same as John in 1850 census?"}
 )
 ```
 

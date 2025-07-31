@@ -1,0 +1,39 @@
+[package]
+name = "rp-network"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+# Core dependencies
+rp-core = { path = "../rp-core" }
+rp-protocol = { path = "../rp-protocol" }
+
+# Async runtime
+async-trait.workspace = true
+tokio = { workspace = true, features = ["net", "rt-multi-thread"] }
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+bincode.workspace = true
+
+# Error handling
+thiserror.workspace = true
+anyhow.workspace = true
+
+# IDs and time
+uuid.workspace = true
+chrono.workspace = true
+
+# Logging
+tracing.workspace = true
+
+# Network specific dependencies
+bytes = "1.7"
+futures = "0.3"
+tokio-util = { version = "0.7", features = ["codec"] }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util", "macros"] }

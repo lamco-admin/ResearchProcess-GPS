@@ -3,7 +3,7 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use validator::{Validate, ValidationErrors};
+use validator::ValidationErrors;
 
 use crate::{Error, Result};
 
@@ -176,8 +176,7 @@ macro_rules! impl_validatable {
         #[async_trait::async_trait]
         impl $crate::validation::Validatable for $type {
             async fn validate(&self) -> $crate::validation::ValidationResult {
-                use validator::Validate;
-                match self.validate() {
+                match <$type as validator::Validate>::validate(self) {
                     Ok(_) => $crate::validation::ValidationResult::new(),
                     Err(e) => e.into(),
                 }

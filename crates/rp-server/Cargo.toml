@@ -1,0 +1,46 @@
+[package]
+name = "rp-server"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+# Core dependencies
+rp-core = { path = "../rp-core" }
+rp-engine = { path = "../rp-engine" }
+rp-storage = { path = "../rp-storage" }
+rp-network = { path = "../rp-network" }
+rp-modules = { path = "../rp-modules" }
+
+# Async runtime
+async-trait.workspace = true
+tokio = { workspace = true, features = ["net", "rt-multi-thread", "signal"] }
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Error handling
+thiserror.workspace = true
+anyhow.workspace = true
+
+# IDs and time
+uuid.workspace = true
+chrono.workspace = true
+
+# Logging
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+# Server specific dependencies
+hyper = { version = "1.5", features = ["server", "http1", "http2"] }
+hyper-util = { version = "0.1", features = ["server"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+http = "1.1"
+futures = "0.3"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util", "macros"] }
+hyper = { version = "1.5", features = ["client"] }

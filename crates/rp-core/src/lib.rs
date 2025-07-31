@@ -11,6 +11,11 @@ pub mod validation;
 pub mod researcher;
 pub mod theory;
 pub mod confidence;
+pub mod evidence;
+pub mod analysis;
+pub mod identity_persona;
+pub mod source;
+pub mod citation;
 
 pub use entity::*;
 pub use error::*;
@@ -28,4 +33,9 @@ pub mod prelude {
     pub use crate::researcher::Researcher;
     pub use crate::theory::{Theory, TheoryState};
     pub use crate::confidence::{Confidence, ConfidenceLevel};
+    pub use crate::evidence::{Evidence, ExtractedFact, FactType, RecordType};
+    pub use crate::analysis::{Analysis, AnalysisType, AnalyticalPoint, ArgumentStrength};
+    pub use crate::identity_persona::{IdentityPersona, IdentityState, IdentityType, EvidenceReference};
+    pub use crate::source::{Source, SourceState, SourceType, SourceQuality, SourceClass, InformationClass};
+    pub use crate::citation::{Citation, CitationState, CitationPurpose, CitationQuality, CitingEntityType};
 }
