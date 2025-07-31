@@ -5,17 +5,25 @@ authors.workspace = true
 edition.workspace = true
 license.workspace = true
 
+[[bin]]
+name = "rp-server"
+path = "src/main.rs"
+
 [dependencies]
 # Core dependencies
 rp-core = { path = "../rp-core" }
-rp-engine = { path = "../rp-engine" }
+rp-protocol = { path = "../rp-protocol" }
 rp-storage = { path = "../rp-storage" }
-rp-network = { path = "../rp-network" }
-rp-modules = { path = "../rp-modules" }
+rp-storage-postgres = { path = "../rp-storage-postgres" }
+rp-events = { path = "../rp-events" }
+
+# Web framework
+axum = { version = "0.7", features = ["ws", "macros"] }
+axum-extra = { version = "0.9", features = ["typed-header"] }
 
 # Async runtime
 async-trait.workspace = true
-tokio = { workspace = true, features = ["net", "rt-multi-thread", "signal"] }
+tokio = { workspace = true, features = ["net", "rt-multi-thread", "signal", "sync"] }
 
 # Serialization
 serde.workspace = true
@@ -34,12 +42,16 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 
 # Server specific dependencies
-hyper = { version = "1.5", features = ["server", "http1", "http2"] }
-hyper-util = { version = "0.1", features = ["server"] }
 tower = "0.5"
-tower-http = { version = "0.6", features = ["cors", "trace"] }
+tower-http = { version = "0.6", features = ["cors", "trace", "auth"] }
 http = "1.1"
 futures = "0.3"
+
+# Database
+sqlx = { workspace = true, features = ["postgres", "runtime-tokio", "uuid", "chrono", "json"] }
+
+# Environment
+dotenv = "0.15"
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util", "macros"] }
