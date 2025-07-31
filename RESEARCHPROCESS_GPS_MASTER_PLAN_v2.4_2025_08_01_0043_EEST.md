@@ -1,7 +1,7 @@
 # ResearchProcess-GPS Master Implementation Plan
 ## Comprehensive Project Architecture & Roadmap
-### Timestamp: 2025-07-31 23:27:47 EEST
-### Version: 2.3 - Documentation Reorganized, Living Document Framework Established
+### Timestamp: 2025-08-01 00:43:16 EEST  
+### Version: 2.4 - Critical Architectural Refactoring Required
 
 ---
 
@@ -10,7 +10,15 @@
 **Project**: ResearchProcess-GPS - Research Process Management System  
 **Architecture**: Full Rust implementation with event sourcing  
 **Philosophy**: Standards as configuration, methodologies as metadata  
-**Current Status**: Phase 3 at 95% completion (API layer)  
+**Current Status**: CRITICAL REFACTORING REQUIRED (see Addendum A)
+
+### ⚠️ CRITICAL UPDATE - 2025-08-01
+**Architectural inconsistencies discovered requiring immediate attention:**
+- Entity count is 19 (not 22) + 5 ConfigEntities
+- EntityType enum is incomplete (13 entries, should be 19)
+- NO_FALLBACK_POLICY violations in entity_type_mapper
+- Layer organization needs clarification
+- **See Addendum A: Architectural Refactoring Plan**
 
 ### Key Differentiators
 1. **Process-First Design**: Captures research journey, not just conclusions
@@ -19,9 +27,9 @@
 4. **Extensible**: Module system for custom research tools
 
 ### Implementation Success
-- **Entities Implemented**: 22 (100% of evolved design)
+- **Entities Implemented**: 19 Entity + 5 ConfigEntity implementations
 - **Design Evolution**: Improved from original concept through thoughtful decisions
-- **EntityType Enum**: Needs update to reflect all 22 entities
+- **EntityType Enum**: REQUIRES URGENT FIX - missing 7 entities, has 1 non-entity
 
 ---
 
@@ -217,6 +225,49 @@ This is the mark of a healthy project that improves during implementation rather
 ### Previous Versions
 - v2.1: Incorrectly suggested entities were "missing"
 - v2.0: Initial alignment attempt
+
+---
+
+## 📎 ADDENDUM A: ARCHITECTURAL REFACTORING PLAN
+
+### Critical Discovery - 2025-08-01
+
+During detailed analysis, significant architectural inconsistencies were discovered that require immediate attention before proceeding with any other development.
+
+### Key Findings:
+
+1. **Actual Entity Count**: 19 Entity implementations + 5 ConfigEntity implementations (not 22)
+2. **EntityType Enum**: Only 13 entries, missing 7 entities, includes 1 non-entity (Repository)
+3. **NO_FALLBACK_POLICY Violations**: entity_type_mapper has dangerous fallback behavior
+4. **Layer Misclassification**: Theory belongs in Layer 2, ProofStatement is a WorkProduct
+5. **Naming Issues**: EvidenceAnalysis should be AnalysisReport
+
+### Corrected Layer Organization:
+
+**Layer 1 - Core Data Model** (9 entities):
+- Source Management: Source, Citation, Evidence
+- Identity & Relations: IdentityPersona, Relationship, Location
+- Atomic Data: Fact, Confidence, Analysis
+
+**Layer 2 - Research Process & Products** (9 entities):
+- Process: Theory, ResearchSession, ResearchActivity, ResearchLog, Researcher
+- Products: WorkProduct, ProofStatement, EvidenceAnalysis (→ AnalysisReport)
+
+**Layer 3 - Workflow & Configuration** (1 entity + 5 ConfigEntities):
+- Entity: Workspace
+- ConfigEntities: MethodologyConfig, ModuleConfig, StandardsRegistry, TemplateRegistry, ValidationRule
+
+### Required Actions:
+
+1. **Fix EntityType enum** - Update to 19 entries matching actual entities
+2. **Remove fallback behavior** - Fix NO_FALLBACK_POLICY violations
+3. **Clarify architecture** - Document Entity vs ConfigEntity distinction
+4. **Rename entities** - EvidenceAnalysis → AnalysisReport
+5. **Update documentation** - Reflect actual implementation
+
+**Full details**: See `ARCHITECTURAL_REFACTORING_PLAN_2025_08_01_0043_EEST.md`
+
+**This refactoring is now Priority #1** and must be completed before any other development proceeds.
 
 ---
 
