@@ -22,6 +22,69 @@ use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
+
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        health_handler,
+        list_entities,
+        create_entity,
+        get_entity,
+        update_entity,
+        delete_entity,
+        search_entities,
+        branch_theory,
+        get_theory_evidence,
+        get_theory_compliance_status,
+        get_person_timeline,
+        get_person_relationships,
+        merge_persons,
+        list_workspace_members,
+        invite_workspace_member,
+        remove_workspace_member,
+    ),
+    components(
+        schemas(
+            rp_protocol::CreateEntityRequest,
+            rp_protocol::UpdateEntityRequest,
+            rp_protocol::EntityResponse,
+            rp_protocol::ListResponse<rp_protocol::EntityResponse>,
+            rp_protocol::PaginationParams,
+            rp_protocol::SearchParams,
+            rp_protocol::BranchTheoryRequest,
+            rp_protocol::MergePersonsRequest,
+            rp_protocol::InviteMemberRequest,
+            rp_protocol::HealthResponse,
+            rp_core::layer3::EntityType,
+        )
+    ),
+    tags(
+        (name = "entities", description = "Entity management operations"),
+        (name = "theories", description = "Theory-specific operations"),
+        (name = "persons", description = "Person-specific operations"),
+        (name = "workspaces", description = "Workspace management operations"),
+        (name = "health", description = "Health check endpoints"),
+    ),
+    info(
+        title = "ResearchProcess-GPS API",
+        version = "1.0.0",
+        description = "Research Process Management System with GPS Integration",
+        contact(
+            name = "ResearchProcess-GPS Team",
+            email = "support@researchprocess-gps.com"
+        ),
+        license(
+            name = "MIT",
+        ),
+    ),
+    servers(
+        (url = "http://localhost:8080", description = "Local development server"),
+        (url = "https://api.researchprocess-gps.com", description = "Production server"),
+    ),
+)]
+struct ApiDoc;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -93,6 +156,8 @@ fn create_router(state: Arc<AppState>) -> Router {
         .route("/api/v1/health", get(health_handler))
         // Mount API v1 routes
         .nest("/api/v1", api_v1)
+        // Mount Swagger UI
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         // Global middleware
         .layer(middleware::from_fn(request_id_middleware))
         .layer(CorsLayer::permissive())

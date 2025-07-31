@@ -8,8 +8,8 @@ use validator::Validate;
 
 use crate::{
     work_product::{WorkProduct, WorkProductType},
-    entity::{Entity, EntityData},
-    EntityId, impl_validatable,
+    entity::{Entity, NestableEntity, EntityData},
+    EntityId, impl_validatable, Result,
 };
 
 /// Type of research log
@@ -438,6 +438,60 @@ impl Entity for ResearchLog {
             data: serde_json::to_value(self)
                 .expect("ResearchLog serialization should never fail"),
         }
+    }
+}
+
+// Implement NestableEntity trait for ResearchLog
+#[async_trait]
+impl NestableEntity for ResearchLog {
+    fn children(&self) -> Vec<EntityId> {
+        // ResearchLog can have child log entries and sessions
+        let mut children = Vec::new();
+        
+        // Add session IDs
+        children.extend_from_slice(&self.session_ids);
+        
+        // Add evidence created from entries
+        for entry in &self.entries {
+            children.extend_from_slice(&entry.evidence_created);
+        }
+        
+        children
+    }
+    
+    fn can_contain(&self, entity_type: &str) -> bool {
+        // ResearchLog can contain sessions, evidence, and other logs
+        matches!(entity_type, "ResearchSession" | "Evidence" | "ResearchLog")
+    }
+    
+    async fn add_child(&mut self, child_id: EntityId) -> Result<()> {
+        // Add as session if not already present
+        if !self.session_ids.contains(&child_id) {
+            self.session_ids.push(child_id);
+            self.work_product.metadata.update(self.work_product.metadata.modified_by);
+        }
+        Ok(())
+    }
+    
+    async fn remove_child(&mut self, child_id: EntityId) -> Result<bool> {
+        let initial_len = self.session_ids.len();
+        self.session_ids.retain(|&id| id != child_id);
+        
+        // Also check if it's evidence in any entry
+        let mut removed_from_entries = false;
+        for entry in &mut self.entries {
+            let entry_initial_len = entry.evidence_created.len();
+            entry.evidence_created.retain(|&id| id != child_id);
+            if entry.evidence_created.len() < entry_initial_len {
+                removed_from_entries = true;
+            }
+        }
+        
+        let removed = self.session_ids.len() < initial_len || removed_from_entries;
+        if removed {
+            self.work_product.metadata.update(self.work_product.metadata.modified_by);
+        }
+        Ok(removed)
     }
 }
 

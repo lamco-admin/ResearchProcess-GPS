@@ -6,9 +6,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 use uuid::Uuid;
+use utoipa::ToSchema;
 
 /// Generic entity response wrapper
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct EntityResponse {
     pub id: Uuid,
     pub entity_type: EntityType,
@@ -18,7 +19,7 @@ pub struct EntityResponse {
 }
 
 /// Entity metadata included in responses
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct EntityMetadata {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -32,7 +33,7 @@ pub struct EntityMetadata {
 }
 
 /// List response with pagination
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ListResponse<T> {
     pub items: Vec<T>,
     pub total: u64,
@@ -247,7 +248,7 @@ pub enum ComplianceItemStatus {
 }
 
 /// Health check response
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct HealthResponse {
     pub status: HealthStatus,
     pub version: String,
@@ -256,7 +257,7 @@ pub struct HealthResponse {
     pub details: Option<HashMap<String, JsonValue>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum HealthStatus {
     Healthy,

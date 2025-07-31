@@ -8,9 +8,9 @@ use validator::Validate;
 
 use crate::{
     work_product::{WorkProduct, WorkProductType},
-    entity::{Entity, EntityData},
+    entity::{Entity, NestableEntity, EntityData},
     source::{SourceQuality, InformationClass},
-    EntityId, impl_validatable,
+    EntityId, impl_validatable, Result,
 };
 
 /// Analysis methodology used
@@ -541,6 +541,95 @@ impl Entity for AnalysisReport {
             data: serde_json::to_value(self)
                 .expect("AnalysisReport serialization should never fail"),
         }
+    }
+}
+
+// Implement NestableEntity trait for AnalysisReport
+#[async_trait]
+impl NestableEntity for AnalysisReport {
+    fn children(&self) -> Vec<EntityId> {
+        // AnalysisReport can have child evidence items and linked confidence assessment
+        let mut children = Vec::new();
+        
+        // Add all evidence IDs
+        for item in &self.evidence_items {
+            children.push(item.evidence_id);
+        }
+        
+        // Add confidence assessment if present
+        if let Some(confidence_id) = self.confidence_assessment {
+            children.push(confidence_id);
+        }
+        
+        children
+    }
+    
+    fn can_contain(&self, entity_type: &str) -> bool {
+        // AnalysisReport can contain evidence and confidence assessments
+        matches!(entity_type, "Evidence" | "Confidence")
+    }
+    
+    async fn add_child(&mut self, child_id: EntityId) -> Result<()> {
+        // If it's not already tracked as evidence, add it
+        let already_tracked = self.evidence_items.iter().any(|item| item.evidence_id == child_id);
+        
+        if !already_tracked {
+            // Create a placeholder item - in practice this would need more info
+            let source_quality = SourceQuality {
+                source_class: crate::source::SourceClass::Unknown,
+                information_class: InformationClass::Indeterminate,
+                quality_score: 0.0,
+                dimensions: crate::source::QualityDimensions {
+                    completeness: 0.0,
+                    legibility: 0.0,
+                    accuracy: 0.0,
+                    reliability: 0.0,
+                    temporal_relevance: 0.0,
+                    geographic_relevance: 0.0,
+                },
+                issues: vec![],
+                notes: None,
+                assessed_by: self.work_product.metadata.modified_by,
+                assessed_at: Utc::now(),
+            };
+            
+            let item = AnalysisReportItem {
+                evidence_id: child_id,
+                source_id: EntityId::default(),
+                description: "Added via NestableEntity".to_string(),
+                information: String::new(),
+                source_quality,
+                information_class: InformationClass::Indeterminate,
+                evidence_type: EvidenceType::Indirect,
+                relevance: Relevance::None,
+                reliability: Reliability::Unreliable,
+                notes: Some("Added via NestableEntity interface".to_string()),
+            };
+            
+            self.evidence_items.push(item);
+            self.update_statistics();
+            self.work_product.metadata.update(self.work_product.metadata.modified_by);
+        }
+        Ok(())
+    }
+    
+    async fn remove_child(&mut self, child_id: EntityId) -> Result<bool> {
+        let initial_len = self.evidence_items.len();
+        self.evidence_items.retain(|item| item.evidence_id != child_id);
+        
+        // Also check confidence assessment
+        let mut removed_confidence = false;
+        if self.confidence_assessment == Some(child_id) {
+            self.confidence_assessment = None;
+            removed_confidence = true;
+        }
+        
+        let removed = self.evidence_items.len() < initial_len || removed_confidence;
+        if removed {
+            self.update_statistics();
+            self.work_product.metadata.update(self.work_product.metadata.modified_by);
+        }
+        Ok(removed)
     }
 }
 
