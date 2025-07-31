@@ -13,7 +13,7 @@ use crate::{
 };
 
 /// Types of work products that can be generated
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum WorkProductType {
     /// Research log documenting search activities
     ResearchLog,

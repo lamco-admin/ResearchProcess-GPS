@@ -25,6 +25,7 @@ pub mod research_session;
 pub mod research_activity;
 pub mod proof_statement;
 pub mod evidence_analysis;
+pub mod layer3;
 
 pub use entity::*;
 pub use error::*;
@@ -56,4 +57,5 @@ pub mod prelude {
     pub use crate::research_activity::{ResearchActivity, ActivityType, ActivityResult, ResultQuality};
     pub use crate::proof_statement::{ProofStatement, ProofType, ProofSection, GPSElement, ConflictDescription, ProofAudience};
     pub use crate::evidence_analysis::{EvidenceAnalysis, AnalysisMethod, EvidenceAnalysisItem, EvidenceType, Correlation, Pattern, Anomaly};
+    pub use crate::layer3::{Workspace, MethodologyConfig, WorkspaceId, MethodologyConfigId};
 }
