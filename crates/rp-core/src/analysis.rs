@@ -494,7 +494,7 @@ mod tests {
         
         assert_eq!(analysis.title, "Identity Resolution - John Smith");
         assert_eq!(analysis.analysis_type, AnalysisType::IdentityResolution);
-        assert!(analysis.validate().await.is_valid());
+        assert!(validator::Validate::validate(&analysis).is_ok());
     }
     
     #[tokio::test]
