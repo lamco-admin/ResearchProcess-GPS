@@ -12,7 +12,7 @@ members = [
     "crates/rp-modules",
     "crates/rp-server",
     "crates/rp-client", 
-    "crates/rp-cli",
+    "crates/rp-cli", "crates/rp-events",
 ]
 
 [workspace.package]
