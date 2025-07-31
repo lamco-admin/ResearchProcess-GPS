@@ -39,7 +39,10 @@ impl FilterBuilder {
     
     pub fn entity_type(self, entity_type: EntityType) -> Self {
         // Serialize EntityType as JSON value
-        self.with("entity_type", FilterValue::Json(serde_json::to_value(&entity_type).unwrap_or(serde_json::Value::Null)))
+        // EntityType is a simple enum, serialization should never fail
+        let json_value = serde_json::to_value(&entity_type)
+            .expect("EntityType serialization should never fail");
+        self.with("entity_type", FilterValue::Json(json_value))
     }
     
     pub fn workspace_id(self, workspace_id: Uuid) -> Self {

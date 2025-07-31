@@ -82,12 +82,13 @@ impl Config {
     }
 
     fn build_database_url() -> String {
+        // Database configuration with development defaults
         let host = std::env::var("DB_HOST").unwrap_or_else(|_| "192.168.10.90".to_string());
         let port = std::env::var("DB_PORT").unwrap_or_else(|_| "5432".to_string());
         let name = std::env::var("DB_NAME").unwrap_or_else(|_| "researchprocess_gps".to_string());
         let user = std::env::var("DB_USER").unwrap_or_else(|_| "researchprocess_gps".to_string());
         let password =
-            std::env::var("DB_PASSWORD").unwrap_or_else(|_| "researchprocess_gps".to_string());
+            std::env::var("DB_PASSWORD").unwrap_or_else(|_| "researchprocess_gps".to_string()); // Dev password
 
         format!("postgres://{}:{}@{}:{}/{}", user, password, host, port, name)
     }

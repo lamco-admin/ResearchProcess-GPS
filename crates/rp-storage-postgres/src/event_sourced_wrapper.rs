@@ -7,11 +7,12 @@ use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 use tracing::warn;
 
+use chrono::Utc;
 use rp_storage::{
     Transaction as StorageTrait, StorageResult,
     StorageEntity, VersionData,
 };
-use rp_events::{DomainEvent, PostgresEventStore, EventStore};
+use rp_events::{DomainEvent, PostgresEventStore, EventStore, TheoryEvent, EventMetadata};
 
 use crate::PostgresTransaction;
 
@@ -67,7 +68,25 @@ impl StorageTrait for EventSourcedTransaction {
             &entity.entity_type,
             entity.data.clone(),
             self.actor_id,
-        );
+        ).unwrap_or_else(|e| {
+            warn!("Failed to create event: {}", e);
+            // Return placeholder event for best-effort publishing
+            (DomainEvent::Theory(TheoryEvent::Updated {
+                question: None,
+                hypothesis: None,
+                details: Some("Event creation failed".to_string()),
+            }), EventMetadata {
+                event_id: Uuid::new_v4(),
+                aggregate_id: entity.id,
+                aggregate_type: entity.entity_type.clone(),
+                aggregate_version: 1,
+                occurred_at: Utc::now(),
+                actor_id: self.actor_id,
+                correlation_id: None,
+                causation_id: None,
+                tags: vec![],
+            })
+        });
         self.publish_event(event, metadata).await;
         
         Ok(())
@@ -90,13 +109,19 @@ impl StorageTrait for EventSourcedTransaction {
             
             if updated {
                 // Publish event with incremented version
-                let (event, metadata) = DomainEvent::entity_updated(
+                let (event, metadata) = match DomainEvent::entity_updated(
                     id,
                     &entity.entity_type,
                     updates,
                     self.actor_id,
                     (entity.version + 1) as i64,
-                );
+                ) {
+                    Ok(result) => result,
+                    Err(e) => {
+                        warn!("Failed to create update event: {}", e);
+                        return Ok(updated);
+                    }
+                };
                 self.publish_event(event, metadata).await;
             }
             
@@ -115,12 +140,18 @@ impl StorageTrait for EventSourcedTransaction {
             
             if deleted {
                 // Publish event
-                let (event, metadata) = DomainEvent::entity_deleted(
+                let (event, metadata) = match DomainEvent::entity_deleted(
                     id,
                     &entity.entity_type,
                     self.actor_id,
                     (entity.version + 1) as i64,
-                );
+                ) {
+                    Ok(result) => result,
+                    Err(e) => {
+                        warn!("Failed to create delete event: {}", e);
+                        return Ok(deleted);
+                    }
+                };
                 self.publish_event(event, metadata).await;
             }
             

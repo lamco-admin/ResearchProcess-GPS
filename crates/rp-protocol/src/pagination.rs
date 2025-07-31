@@ -104,7 +104,9 @@ impl Cursor {
     
     pub fn encode(&self) -> String {
         use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
-        let json = serde_json::to_string(self).unwrap_or_default();
+        // Cursor is a simple struct, serialization should never fail
+        let json = serde_json::to_string(self)
+            .expect("Cursor serialization should never fail");
         URL_SAFE_NO_PAD.encode(json.as_bytes())
     }
     

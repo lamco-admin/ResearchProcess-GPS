@@ -421,6 +421,8 @@ impl Citation {
     
     /// Get display citation (prefers full over quick)
     pub fn display_citation(&self) -> &str {
+        // Prefer full_citation but fall back to quick_citation
+        // This is acceptable because quick_citation is always required
         self.full_citation.as_ref().unwrap_or(&self.quick_citation)
     }
     

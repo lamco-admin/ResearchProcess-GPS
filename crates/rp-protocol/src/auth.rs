@@ -169,9 +169,10 @@ impl AuthorizationCheck {
         
         // Check permissions
         let permission_key = format!("{}.{}", self.resource_type, self.action);
+        // Default to denying access if permission is not explicitly granted
         context.permissions
             .get(&permission_key)
             .map(|p| p.can_read())
-            .unwrap_or(false)
+            .unwrap_or(false) // Explicit security default: deny access when permission is not found
     }
 }

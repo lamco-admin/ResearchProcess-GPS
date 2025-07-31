@@ -6,7 +6,7 @@ use uuid::Uuid;
 use std::collections::HashMap;
 
 use crate::{
-    DomainEvent, EventMetadata,
+    DomainEvent, EventMetadata, EventError,
     TheoryEvent, PersonEvent, WorkspaceEvent,
 };
 
@@ -20,7 +20,7 @@ impl DomainEvent {
         entity_type: &str,
         data: JsonValue,
         actor_id: Uuid,
-    ) -> (Self, EventMetadata) {
+    ) -> Result<(Self, EventMetadata), EventError> {
         let metadata = EventMetadata {
             event_id: Uuid::new_v4(),
             aggregate_id: entity_id,
@@ -38,16 +38,20 @@ impl DomainEvent {
             "Theory" => {
                 let question = data.get("question")
                     .and_then(|v| v.as_str())
-                    .unwrap_or("")
+                    .ok_or_else(|| EventError::InvalidEventData {
+                        message: "Theory event missing required field: question".to_string()
+                    })?
                     .to_string();
                 let hypothesis = data.get("hypothesis")
                     .and_then(|v| v.as_str())
-                    .unwrap_or("")
+                    .ok_or_else(|| EventError::InvalidEventData {
+                        message: "Theory event missing required field: hypothesis".to_string()
+                    })?
                     .to_string();
                 let researcher_id = data.get("researcher_id")
                     .and_then(|v| v.as_str())
                     .and_then(|s| Uuid::parse_str(s).ok())
-                    .unwrap_or(actor_id);
+                    .unwrap_or(actor_id); // Actor ID is acceptable default for researcher
                 
                 DomainEvent::Theory(TheoryEvent::Created {
                     question,
@@ -62,7 +66,7 @@ impl DomainEvent {
                         .filter_map(|v| v.as_str())
                         .filter_map(|s| Uuid::parse_str(s).ok())
                         .collect())
-                    .unwrap_or_else(Vec::new);
+                    .unwrap_or_else(Vec::new); // Empty identities list is valid
                 
                 DomainEvent::Person(PersonEvent::Created {
                     from_identities,
@@ -72,7 +76,9 @@ impl DomainEvent {
             "Workspace" => {
                 let name = data.get("name")
                     .and_then(|v| v.as_str())
-                    .unwrap_or("Unnamed Workspace")
+                    .ok_or_else(|| EventError::InvalidEventData {
+                        message: "Workspace event missing required field: name".to_string()
+                    })?
                     .to_string();
                 
                 DomainEvent::Workspace(WorkspaceEvent::Created {
@@ -92,7 +98,7 @@ impl DomainEvent {
             }
         };
         
-        (event, metadata)
+        Ok((event, metadata))
     }
     
     /// Create a generic entity updated event
@@ -102,7 +108,7 @@ impl DomainEvent {
         changes: HashMap<String, JsonValue>,
         actor_id: Uuid,
         version: i64,
-    ) -> (Self, EventMetadata) {
+    ) -> Result<(Self, EventMetadata), EventError> {
         let metadata = EventMetadata {
             event_id: Uuid::new_v4(),
             aggregate_id: entity_id,
@@ -132,7 +138,8 @@ impl DomainEvent {
             },
             "Person" => {
                 DomainEvent::Person(PersonEvent::Updated {
-                    details: serde_json::to_value(&changes).unwrap_or(JsonValue::Object(Default::default())),
+                    details: serde_json::to_value(&changes)
+                        .map_err(|e| EventError::SerializationError(e))?,
                 })
             },
             _ => {
@@ -145,7 +152,7 @@ impl DomainEvent {
             }
         };
         
-        (event, metadata)
+        Ok((event, metadata))
     }
     
     /// Create a generic entity deleted event
@@ -154,7 +161,7 @@ impl DomainEvent {
         entity_type: &str,
         actor_id: Uuid,
         version: i64,
-    ) -> (Self, EventMetadata) {
+    ) -> Result<(Self, EventMetadata), EventError> {
         let metadata = EventMetadata {
             event_id: Uuid::new_v4(),
             aggregate_id: entity_id,
@@ -189,7 +196,7 @@ impl DomainEvent {
             }
         };
         
-        (event, metadata)
+        Ok((event, metadata))
     }
     
     // Specific factory methods for common operations
@@ -201,7 +208,7 @@ impl DomainEvent {
         hypothesis: String,
         researcher_id: Uuid,
         actor_id: Uuid,
-    ) -> (Self, EventMetadata) {
+    ) -> Result<(Self, EventMetadata), EventError> {
         let metadata = EventMetadata {
             event_id: Uuid::new_v4(),
             aggregate_id: theory_id,
@@ -220,7 +227,7 @@ impl DomainEvent {
             researcher_id,
         });
         
-        (event, metadata)
+        Ok((event, metadata))
     }
     
     /// Create a person created event
@@ -229,7 +236,7 @@ impl DomainEvent {
         from_identities: Vec<Uuid>,
         concluded_by: Uuid,
         actor_id: Uuid,
-    ) -> (Self, EventMetadata) {
+    ) -> Result<(Self, EventMetadata), EventError> {
         let metadata = EventMetadata {
             event_id: Uuid::new_v4(),
             aggregate_id: person_id,
@@ -247,7 +254,7 @@ impl DomainEvent {
             concluded_by,
         });
         
-        (event, metadata)
+        Ok((event, metadata))
     }
     
     /// Create a workspace created event
@@ -255,7 +262,7 @@ impl DomainEvent {
         workspace_id: Uuid,
         name: String,
         creator_id: Uuid,
-    ) -> (Self, EventMetadata) {
+    ) -> Result<(Self, EventMetadata), EventError> {
         let metadata = EventMetadata {
             event_id: Uuid::new_v4(),
             aggregate_id: workspace_id,
@@ -273,7 +280,7 @@ impl DomainEvent {
             owner_id: creator_id,
         });
         
-        (event, metadata)
+        Ok((event, metadata))
     }
 }
 

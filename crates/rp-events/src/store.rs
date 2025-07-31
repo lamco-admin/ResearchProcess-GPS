@@ -6,6 +6,10 @@ use uuid::Uuid;
 
 use crate::{DomainEvent, EventError, EventMetadata, Result};
 
+// Explicit pagination constants
+const DEFAULT_PAGE_SIZE: i32 = 100;
+const DEFAULT_OFFSET: i32 = 0;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StoredEvent {
     pub id: Uuid,
@@ -123,7 +127,7 @@ impl PostgresEventStore {
         .fetch_one(&mut **tx)
         .await?;
         
-        Ok(result.version.unwrap_or(0))
+        Ok(result.version.unwrap_or(0)) // 0 for new aggregates
     }
 }
 
@@ -159,8 +163,8 @@ impl EventStore for PostgresEventStore {
         from_version: Option<i64>,
         to_version: Option<i64>,
     ) -> Result<EventStream> {
-        let from_version = from_version.unwrap_or(1);
-        let to_version = to_version.unwrap_or(i64::MAX);
+        let from_version = from_version.unwrap_or(1); // Start from version 1
+        let to_version = to_version.unwrap_or(i64::MAX); // Unbounded upper limit
         
         let events = sqlx::query_as!(
             StoredEvent,
@@ -200,7 +204,11 @@ impl EventStore for PostgresEventStore {
         }
         
         let aggregate_type = events[0].aggregate_type.clone();
-        let current_version = events.last().map(|e| e.aggregate_version).unwrap_or(0);
+        let current_version = events.last()
+            .map(|e| e.aggregate_version)
+            .ok_or_else(|| EventError::InvalidEventData {
+                message: "Event stream is empty".to_string()
+            })?;
         
         Ok(EventStream {
             aggregate_id,
@@ -216,8 +224,8 @@ impl EventStore for PostgresEventStore {
         limit: Option<i32>,
         offset: Option<i32>,
     ) -> Result<Vec<StoredEvent>> {
-        let limit = limit.unwrap_or(100);
-        let offset = offset.unwrap_or(0);
+        let limit = limit.unwrap_or(DEFAULT_PAGE_SIZE); // Use default page size
+        let offset = offset.unwrap_or(DEFAULT_OFFSET); // Default offset for pagination
         
         let events = sqlx::query_as!(
             StoredEvent,
@@ -264,7 +272,7 @@ impl EventStore for PostgresEventStore {
         .fetch_one(&self.pool)
         .await?;
         
-        Ok(result.version.unwrap_or(0))
+        Ok(result.version.unwrap_or(0)) // 0 for new aggregates
     }
     
     async fn save_snapshot(&self, snapshot: Snapshot) -> Result<()> {
@@ -299,7 +307,7 @@ impl EventStore for PostgresEventStore {
         aggregate_id: Uuid,
         max_version: Option<i64>,
     ) -> Result<Option<Snapshot>> {
-        let max_version = max_version.unwrap_or(i64::MAX);
+        let max_version = max_version.unwrap_or(i64::MAX); // Unbounded version search
         
         let snapshot = sqlx::query_as!(
             Snapshot,

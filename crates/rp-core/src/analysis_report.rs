@@ -538,7 +538,8 @@ impl Entity for AnalysisReport {
             modified_at: self.modified_at(),
             is_active: self.is_active(),
             version: Some(self.work_product.metadata.version),
-            data: serde_json::to_value(self).unwrap_or_default(),
+            data: serde_json::to_value(self)
+                .expect("AnalysisReport serialization should never fail"),
         }
     }
 }

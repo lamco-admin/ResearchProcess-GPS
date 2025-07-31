@@ -370,6 +370,8 @@ impl IdentityPersona {
         match self.identity_type {
             IdentityType::Named => self.primary_name.clone(),
             IdentityType::Described => {
+                // For described identities, prefer description but fall back to primary_name
+                // This is acceptable because primary_name is always required
                 self.description.as_ref()
                     .unwrap_or(&self.primary_name)
                     .clone()

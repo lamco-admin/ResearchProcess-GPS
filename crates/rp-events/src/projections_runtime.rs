@@ -74,7 +74,7 @@ impl ProjectionManager {
     }
     
     pub async fn process_events(&self, from_position: Option<i64>) -> Result<()> {
-        let from_position = from_position.unwrap_or(0);
+        let from_position = from_position.unwrap_or(0); // Start from beginning if not specified
         
         // Get unprocessed events
         let rows = sqlx::query(
