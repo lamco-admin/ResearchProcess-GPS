@@ -224,11 +224,16 @@ DECLARE
     v_new_version BIGINT;
 BEGIN
     -- Get current version with lock
+    -- First lock the aggregate by selecting any row for this aggregate
+    PERFORM 1 FROM events 
+    WHERE aggregate_id = p_aggregate_id 
+    FOR UPDATE;
+    
+    -- Then get the max version
     SELECT COALESCE(MAX(aggregate_version), 0)
     INTO v_current_version
     FROM events
-    WHERE aggregate_id = p_aggregate_id
-    FOR UPDATE;
+    WHERE aggregate_id = p_aggregate_id;
     
     -- Check expected version (-1 means no check)
     IF p_expected_version != -1 AND v_current_version != p_expected_version THEN

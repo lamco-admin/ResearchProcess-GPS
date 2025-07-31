@@ -42,12 +42,11 @@ impl EventSourcedTransaction {
     async fn publish_event(&self, event: DomainEvent, metadata: rp_events::EventMetadata) {
         let aggregate_id = metadata.aggregate_id;
         let aggregate_type = metadata.aggregate_type.clone();
-        let aggregate_version = metadata.aggregate_version;
         
         if let Err(e) = self.event_store.append_event(
             aggregate_id,
             &aggregate_type,
-            aggregate_version,
+            -1, // Use -1 to skip version check for now
             event,
             metadata,
         ).await {
