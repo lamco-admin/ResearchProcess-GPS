@@ -7,8 +7,20 @@ use std::time::Duration;
 /// PostgreSQL backend configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PostgresConfig {
-    /// Database connection URL
-    pub database_url: String,
+    /// Database host
+    pub host: String,
+    
+    /// Database port
+    pub port: u16,
+    
+    /// Database name
+    pub database: String,
+    
+    /// Username
+    pub username: String,
+    
+    /// Password
+    pub password: String,
     
     /// Maximum number of connections in the pool
     pub max_connections: u32,
@@ -24,6 +36,9 @@ pub struct PostgresConfig {
     
     /// Maximum lifetime of a connection
     pub max_lifetime: Option<Duration>,
+    
+    /// Connection timeout
+    pub connection_timeout: Duration,
     
     /// Enable statement-level caching
     pub statement_cache_capacity: usize,
@@ -58,12 +73,17 @@ pub enum SslMode {
 impl Default for PostgresConfig {
     fn default() -> Self {
         Self {
-            database_url: String::new(),
+            host: "localhost".to_string(),
+            port: 5432,
+            database: "postgres".to_string(),
+            username: "postgres".to_string(),
+            password: String::new(),
             max_connections: 32,
             min_connections: 5,
             connect_timeout: Duration::from_secs(30),
             idle_timeout: Some(Duration::from_secs(600)),
             max_lifetime: Some(Duration::from_secs(1800)),
+            connection_timeout: Duration::from_secs(30),
             statement_cache_capacity: 100,
             ssl_mode: SslMode::Prefer,
             application_name: "researchprocess-gps".to_string(),
@@ -87,7 +107,11 @@ impl PostgresConfig {
         }
         
         let mut config = Self {
-            database_url: url_str.to_string(),
+            host: url.host_str().unwrap_or("localhost").to_string(),
+            port: url.port().unwrap_or(5432),
+            database: url.path().trim_start_matches('/').to_string(),
+            username: url.username().to_string(),
+            password: url.password().unwrap_or("").to_string(),
             ..Default::default()
         };
         
@@ -145,9 +169,21 @@ impl PostgresConfig {
         Ok(config)
     }
     
+    /// Build database URL from components
+    pub fn database_url(&self) -> String {
+        format!(
+            "postgres://{}:{}@{}:{}/{}",
+            urlencoding::encode(&self.username),
+            urlencoding::encode(&self.password),
+            &self.host,
+            self.port,
+            &self.database
+        )
+    }
+    
     /// Build SQLx connection options
     pub fn to_sqlx_options(&self) -> sqlx::postgres::PgConnectOptions {
-        let mut options = self.database_url.parse::<sqlx::postgres::PgConnectOptions>()
+        let mut options = self.database_url().parse::<sqlx::postgres::PgConnectOptions>()
             .expect("Invalid database URL");
         
         options = options

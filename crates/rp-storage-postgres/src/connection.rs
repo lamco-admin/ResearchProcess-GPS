@@ -4,7 +4,23 @@ use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::sync::Arc;
 use tracing::{debug, info, warn};
 
-use crate::{PostgresConfig, PostgresError, PostgresResult};
+use crate::{PostgresConfig, PostgresResult};
+
+/// Pool statistics
+#[derive(Debug, Clone)]
+pub struct PoolStats {
+    pub size: u32,
+    pub idle: u32,
+    pub max_connections: u32,
+    pub min_connections: u32,
+}
+
+/// Extension availability status
+#[derive(Debug, Default)]
+pub struct ExtensionStatus {
+    pub vector: bool,
+    pub graph: bool,
+}
 
 /// PostgreSQL connection pool wrapper
 #[derive(Clone)]
@@ -18,12 +34,20 @@ impl ConnectionPool {
     pub async fn new(config: PostgresConfig) -> PostgresResult<Self> {
         info!("Creating PostgreSQL connection pool");
         
-        let pool = PgPoolOptions::new()
+        let mut pool_options = PgPoolOptions::new()
             .max_connections(config.max_connections)
             .min_connections(config.min_connections)
-            .acquire_timeout(config.connect_timeout)
-            .idle_timeout(config.idle_timeout)
-            .max_lifetime(config.max_lifetime)
+            .acquire_timeout(config.connect_timeout);
+            
+        if let Some(idle_timeout) = config.idle_timeout {
+            pool_options = pool_options.idle_timeout(idle_timeout);
+        }
+        
+        if let Some(max_lifetime) = config.max_lifetime {
+            pool_options = pool_options.max_lifetime(max_lifetime);
+        }
+        
+        let pool = pool_options
             .connect_with(config.to_sqlx_options())
             .await?;
         
@@ -68,7 +92,7 @@ impl ConnectionPool {
     pub fn stats(&self) -> PoolStats {
         PoolStats {
             size: self.pool.size(),
-            idle: self.pool.num_idle(),
+            idle: self.pool.num_idle() as u32,
             max_connections: self.config.max_connections,
             min_connections: self.config.min_connections,
         }
@@ -115,13 +139,14 @@ impl ConnectionPool {
         }
         
         // Always check for required extensions
-        status.uuid = sqlx::query_scalar::<_, bool>(
+        // Check for uuid-ossp and btree_gin are not stored but they're required extensions
+        let _uuid_ext = sqlx::query_scalar::<_, bool>(
             "SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'uuid-ossp')"
         )
         .fetch_one(&mut *conn)
         .await?;
         
-        status.btree_gin = sqlx::query_scalar::<_, bool>(
+        let _btree_gin_ext = sqlx::query_scalar::<_, bool>(
             "SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'btree_gin')"
         )
         .fetch_one(&mut *conn)
@@ -131,20 +156,3 @@ impl ConnectionPool {
     }
 }
 
-/// Pool statistics
-#[derive(Debug, Clone)]
-pub struct PoolStats {
-    pub size: u32,
-    pub idle: usize,
-    pub max_connections: u32,
-    pub min_connections: u32,
-}
-
-/// Extension availability status
-#[derive(Debug, Default)]
-pub struct ExtensionStatus {
-    pub uuid: bool,
-    pub btree_gin: bool,
-    pub vector: bool,
-    pub graph: bool,
-}
