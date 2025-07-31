@@ -11,6 +11,7 @@ use rp_server::{
         branch_theory, get_theory_evidence, get_theory_compliance_status,
         get_person_timeline, get_person_relationships, merge_persons,
         list_workspace_members, invite_workspace_member, remove_workspace_member,
+        search_entities,
     },
     middleware::{auth_middleware, request_id_middleware},
     notify::start_notification_listener,
@@ -67,6 +68,8 @@ fn create_router(state: Arc<AppState>) -> Router {
             "/entities/:id",
             get(get_entity).put(update_entity).delete(delete_entity),
         )
+        // Search endpoint
+        .route("/search", get(search_entities))
         // Theory-specific endpoints
         .route("/theories/:id/branch", post(branch_theory))
         .route("/theories/:id/evidence", get(get_theory_evidence))

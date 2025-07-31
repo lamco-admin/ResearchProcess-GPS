@@ -53,6 +53,9 @@ sqlx = { workspace = true, features = ["postgres", "runtime-tokio", "uuid", "chr
 # Environment
 dotenv = "0.15"
 
+# Authentication
+lazy_static = "1.5"
+
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util", "macros"] }
 hyper = { version = "1.5", features = ["client"] }

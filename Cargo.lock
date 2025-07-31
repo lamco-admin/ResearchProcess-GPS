@@ -2674,6 +2674,7 @@ dependencies = [
  "futures",
  "http",
  "hyper",
+ "lazy_static",
  "rp-core",
  "rp-events",
  "rp-protocol",
