@@ -1,0 +1,50 @@
+# Research Log Module Manifest
+
+[module]
+name = "research-log"
+version = "0.1.0"
+description = "Advanced research logging and analysis module"
+author = "ResearchProcess-GPS Team"
+license = "MIT"
+module_type = "native"  # We'll start with native, then create WASM version
+
+[dependencies]
+rp-module-sdk = { version = "0.1.0", optional = true }
+
+[capabilities]
+# Entity access permissions
+entity_read = ["ResearchLog", "Theory", "Evidence", "Analysis", "Researcher"]
+entity_write = ["ResearchLog", "Analysis"]
+entity_create = ["ResearchLog", "Analysis"]
+
+# Event permissions
+event_subscribe = ["Theory.*", "Evidence.*", "Analysis.*"]
+event_emit = ["ResearchLog.*", "Analysis.*"]
+
+# Storage permissions
+storage_access = true
+
+[resources]
+# Resource limits (enforced for WASM, advisory for native)
+memory_limit = "64MB"
+storage_quota = "10MB"
+cpu_time_limit = "100ms"
+
+[exports]
+# Commands this module provides
+commands = [
+    "create_log",
+    "add_entry", 
+    "analyze_activity",
+    "generate_summary",
+    "export_timeline"
+]
+
+# UI components (future enhancement)
+ui_components = []
+
+[config]
+# Module-specific configuration
+default_template = "standard"
+auto_timestamp = true
+activity_tracking = true

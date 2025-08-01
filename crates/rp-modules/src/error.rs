@@ -25,6 +25,10 @@ pub enum ModuleError {
     #[error("Module execution error: {0}")]
     ExecutionError(String),
     
+    /// Module shutdown error
+    #[error("Module shutdown failed: {0}")]
+    ShutdownError(String),
+    
     /// Resource limit exceeded
     #[error("Resource limit exceeded: {0}")]
     ResourceLimitExceeded(String),

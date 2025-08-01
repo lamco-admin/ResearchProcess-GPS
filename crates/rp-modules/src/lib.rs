@@ -13,6 +13,9 @@ pub mod resource_limits;
 pub mod communication;
 pub mod error;
 
+#[cfg(test)]
+mod tests;
+
 pub use module::{ResearchModule, ModuleMetadata};
 pub use manifest::ModuleManifest;
 pub use registry::ModuleRegistry;

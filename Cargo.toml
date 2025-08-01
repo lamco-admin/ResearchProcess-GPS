@@ -13,6 +13,7 @@ members = [
     "crates/rp-server",
     "crates/rp-client", 
     "crates/rp-cli", "crates/rp-events",
+    "modules/research-log",
 ]
 
 [workspace.package]

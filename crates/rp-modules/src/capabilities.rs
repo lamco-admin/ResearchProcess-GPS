@@ -90,6 +90,36 @@ impl ModuleCapabilities {
             Capability::Custom(name) => self.custom.contains(name),
         }
     }
+    
+    /// Check if module can read a specific entity type
+    pub fn can_read_entity(&self, entity_type: &str) -> bool {
+        self.entity_read.contains("*") || self.entity_read.contains(entity_type)
+    }
+    
+    /// Check if module can write a specific entity type
+    pub fn can_write_entity(&self, entity_type: &str) -> bool {
+        self.entity_write.contains("*") || self.entity_write.contains(entity_type)
+    }
+    
+    /// Check if module can create a specific entity type
+    pub fn can_create_entity(&self, entity_type: &str) -> bool {
+        self.entity_create.contains("*") || self.entity_create.contains(entity_type)
+    }
+    
+    /// Check if module can delete a specific entity type
+    pub fn can_delete_entity(&self, entity_type: &str) -> bool {
+        self.entity_delete.contains("*") || self.entity_delete.contains(entity_type)
+    }
+    
+    /// Check if module can subscribe to a specific event type
+    pub fn can_subscribe_event(&self, event_type: &str) -> bool {
+        self.event_subscribe.contains("*") || self.event_subscribe.contains(event_type)
+    }
+    
+    /// Check if module can emit a specific event type
+    pub fn can_emit_event(&self, event_type: &str) -> bool {
+        self.event_emit.contains("*") || self.event_emit.contains(event_type)
+    }
 }
 
 /// Individual capability
