@@ -64,7 +64,7 @@ fn test_wasm_module_loads() {
     }
     
     // Try to call initialize if it exists
-    if let Ok(initialize) = instance.get_typed_func::<(i32,), i32>(&mut store, "initialize") {
+    if let Ok(_initialize) = instance.get_typed_func::<(i32,), i32>(&mut store, "initialize") {
         println!("Found initialize function");
         // We'd need to pass proper string pointer here in real implementation
     } else {

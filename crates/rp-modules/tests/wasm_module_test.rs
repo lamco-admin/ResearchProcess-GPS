@@ -66,7 +66,16 @@ async fn test_load_wasm_module() {
     // Verify module is loaded
     assert!(loader.is_loaded(&module_id));
     
-    // Get module info
+    // Module should be in Loaded state initially
+    let info = loader.get_module(&module_id);
+    assert!(info.is_some());
+    assert_eq!(info.unwrap().metadata.status, ModuleStatus::Loaded);
+    
+    // Initialize the module
+    let init_result = loader.initialize_module(&module_id).await;
+    assert!(init_result.is_ok(), "Failed to initialize module: {:?}", init_result.err());
+    
+    // Now module should be running
     let info = loader.get_module(&module_id);
     assert!(info.is_some());
     let info = info.unwrap();
@@ -180,6 +189,10 @@ async fn test_wasm_module_isolation() {
     assert!(loader.is_loaded(&module1));
     assert!(loader.is_loaded(&module2));
     assert_ne!(module1, module2);
+    
+    // Initialize both modules
+    loader.initialize_module(&module1).await.unwrap();
+    loader.initialize_module(&module2).await.unwrap();
     
     // Create logs in both
     let result1 = loader.execute_command(
