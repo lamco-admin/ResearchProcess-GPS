@@ -10,6 +10,7 @@ license.workspace = true
 rp-core = { path = "../rp-core" }
 rp-engine = { path = "../rp-engine" }
 rp-storage = { path = "../rp-storage" }
+rp-events = { path = "../rp-events" }
 
 # Async runtime
 async-trait.workspace = true
@@ -34,6 +35,16 @@ tracing.workspace = true
 futures = "0.3"
 dashmap = "6.1"
 parking_lot = "0.12"
+
+# WASM runtime
+wasmtime = "25.0"
+wasmtime-wasi = "25.0"
+
+# Dynamic loading for native modules
+libloading = "0.8"
+
+# Configuration
+toml = "0.8"
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util", "macros"] }
