@@ -45,7 +45,7 @@ async fn test_load_wasm_module() {
     };
     
     // Create module loader
-    let mut loader = ModuleLoader::new().expect("Failed to create module loader");
+    let loader = ModuleLoader::new().expect("Failed to create module loader");
     
     // Create module context
     let (host_sender, mut host_receiver) = ModuleChannel::create();
@@ -99,7 +99,7 @@ async fn test_load_wasm_module() {
     }
     
     // Unload module
-    let unload_result = loader.unload_module(&module_id).await;
+    let unload_result = loader.unload_module(module_id).await;
     assert!(unload_result.is_ok());
     assert!(!loader.is_loaded(&module_id));
 }
@@ -125,7 +125,7 @@ async fn test_wasm_module_resource_limits() {
         events_per_minute: 10,
     };
     
-    let mut loader = ModuleLoader::new().expect("Failed to create module loader");
+    let loader = ModuleLoader::new().expect("Failed to create module loader");
     let (host_sender, _) = ModuleChannel::create();
     let context = ModuleContext {
         instance_id: Uuid::new_v4(),
@@ -149,7 +149,7 @@ async fn test_wasm_module_isolation() {
         return;
     }
     
-    let mut loader = ModuleLoader::new().expect("Failed to create module loader");
+    let loader = ModuleLoader::new().expect("Failed to create module loader");
     
     // Load two instances of the same module
     let limits = ModuleResourceLimits::default();
@@ -198,6 +198,6 @@ async fn test_wasm_module_isolation() {
     assert_ne!(result1.get("log_id"), result2.get("log_id"));
     
     // Clean up
-    loader.unload_module(&module1).await.unwrap();
-    loader.unload_module(&module2).await.unwrap();
+    loader.unload_module(module1).await.unwrap();
+    loader.unload_module(module2).await.unwrap();
 }

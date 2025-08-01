@@ -60,7 +60,7 @@ fn test_wasm_module_loads() {
     let exports = module.exports();
     println!("WASM module exports:");
     for export in exports {
-        println!("  - {} ({})", export.name(), export.ty());
+        println!("  - {} ({:?})", export.name(), export.ty());
     }
     
     // Try to call initialize if it exists
@@ -90,7 +90,7 @@ fn test_wasm_module_basic_structure() {
     // Check imports
     println!("\nWASM module imports:");
     for import in module.imports() {
-        println!("  - {}::{} ({})", import.module(), import.name(), import.ty());
+        println!("  - {}::{} ({:?})", import.module(), import.name(), import.ty());
     }
     
     // Check memory requirements

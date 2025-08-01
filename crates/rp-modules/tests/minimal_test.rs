@@ -9,7 +9,7 @@ fn test_basic_compilation() {
 // Test just the loader creation without any WASM
 #[test]
 fn test_loader_creation_only() {
-    use crate::loader::ModuleLoader;
+    use rp_modules::loader::ModuleLoader;
     
     // Try to create a loader
     let result = ModuleLoader::new();
