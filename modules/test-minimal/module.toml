@@ -1,0 +1,10 @@
+[module]
+name = "test-minimal"
+version = "0.1.0"
+description = "Minimal FFI test module for architecture validation"
+author = "ResearchProcess-GPS Team"
+license = "MIT"
+module_type = "native"
+
+[capabilities]
+# No special capabilities needed for test module

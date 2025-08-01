@@ -1,7 +1,7 @@
 # ResearchProcess-GPS Master Implementation Plan
 ## Comprehensive Project Architecture & Roadmap
-### Timestamp: 2025-08-01 17:17:50 EEST  
-### Version: 3.6 - Module System Architecture & FFI Issues
+### Timestamp: 2025-08-01 17:37:41 EEST  
+### Version: 3.7 - Module System Message-Based FFI Architecture
 
 ---
 
@@ -209,7 +209,7 @@ researchprocess-gps/
 - [x] OpenAPI documentation ✅ COMPLETE
 - [ ] Rate limiting (optional)
 
-### 🚧 Phase 4: Module System (90% Complete) ✅ UNBLOCKED
+### 🚧 Phase 4: Module System (75% Complete) 🔧 REDESIGNING FFI
 **Goal**: Extensible module framework
 
 **Completed**:
@@ -243,8 +243,11 @@ researchprocess-gps/
 - [x] SDK API alignment with actual rp-modules ✅
 - [x] Execute command mock response removed ✅
 
-**Critical Issue - Native Module FFI**:
-- [ ] Native module segfaults on initialization - FFI issue needs resolution
+**In Progress - Message-Based FFI Architecture**:
+- [ ] Design message protocol specification
+- [ ] Implement native module message handling  
+- [ ] Update WASM modules to use unified message format
+- [ ] Create module SDK for message building
 - [ ] Module development documentation
 - [ ] Hot-reload capability
 
@@ -401,6 +404,19 @@ This is the mark of a healthy project that improves during implementation rather
 ---
 
 ## 🔄 CHANGE LOG
+
+### 2025-08-01 17:37 EEST - Version 3.7
+- **MAJOR ARCHITECTURAL DECISION**: Module System FFI Redesign
+- **Problem Identified**: Native module FFI using trait objects is fundamentally unsafe
+- **Solution Designed**: Message-based FFI architecture for all modules
+  - Unified JSON message protocol for native and WASM modules
+  - No trait objects across FFI boundaries
+  - C-compatible function pointers only
+  - Full Layer 1 data access through queries and mutations
+- **Impact**: Requires redesign of native module implementation
+- **Benefits**: Safety, uniformity, extensibility, language agnostic
+- **Added**: Comprehensive Addendum D documenting the architecture
+- **Phase 4 Status**: Adjusted to reflect new scope
 
 ### 2025-08-01 17:17 EEST - Version 3.6
 - **Phase 4 Progress**: Module system 90% complete
@@ -609,6 +625,147 @@ See detailed reports:
 
 ### Decision:
 Accept current build times for now. Optimize when builds exceed 15 minutes or significantly impact development velocity. See [Technical Debt Document](docs/technical-debt/BUILD_OPTIMIZATION_DEBT_2025_08_01_1243_EEST.md) for full analysis.
+
+---
+
+## 📎 ADDENDUM D: MODULE SYSTEM FFI ARCHITECTURE REDESIGN
+
+### Added - 2025-08-01 17:37
+
+**Critical Architectural Decision**: Complete redesign of native module FFI interface
+
+### The Problem Discovered
+
+The initial native module implementation attempted to pass Rust trait objects (`dyn ResearchModule`) across FFI boundaries, which is fundamentally unsafe because:
+- Trait objects are "fat pointers" (16 bytes) that C cannot understand
+- Double-boxing creates complex pointer indirection
+- This architecture causes immediate segfaults on module initialization
+- The approach violates FFI safety principles
+
+### The Solution: Message-Based FFI Architecture
+
+After researching best practices from successful plugin systems (cargo, neovim, etc.), we've designed a **unified message-based architecture** for both native and WASM modules.
+
+#### Core Design Principles
+
+1. **No Trait Objects Across FFI**: Only C-compatible types cross boundaries
+2. **JSON Message Protocol**: All communication uses serialized JSON messages
+3. **Unified Interface**: Native and WASM modules use identical message formats
+4. **Module Isolation**: Modules cannot directly access host memory or data structures
+
+#### FFI Interface Design
+
+```rust
+// Simple C-compatible function table
+#[repr(C)]
+pub struct ModuleFunctions {
+    // Module lifecycle
+    create: extern "C" fn() -> *mut c_void,
+    destroy: extern "C" fn(*mut c_void),
+    
+    // Single message handler for all communication
+    handle_message: extern "C" fn(
+        module: *mut c_void,
+        message_type: *const c_char,  // "command", "event", "query", "mutation"
+        payload: *const c_char         // JSON serialized data
+    ) -> *mut c_char,                  // JSON response
+}
+```
+
+#### Message Types
+
+1. **Commands**: Execute module-specific operations
+   ```json
+   {
+     "type": "command",
+     "name": "analyze_research_log",
+     "args": {"log_id": "uuid", "depth": "full"}
+   }
+   ```
+
+2. **Queries**: Read Layer 1 data
+   ```json
+   {
+     "type": "query",
+     "entity": "research_log",
+     "id": "uuid",
+     "include": ["entries", "metadata"]
+   }
+   ```
+
+3. **Mutations**: Modify Layer 1 data
+   ```json
+   {
+     "type": "mutation",
+     "entity": "analysis_report",
+     "operation": "create",
+     "data": {
+       "title": "Pattern Analysis",
+       "content": "...",
+       "source_entities": ["log-id-1", "evidence-id-2"]
+     }
+   }
+   ```
+
+4. **Events**: Receive notifications about system changes
+   ```json
+   {
+     "type": "event",
+     "event": "research_log.updated",
+     "entity_id": "uuid",
+     "changes": ["status", "metadata.tags"]
+   }
+   ```
+
+### Architecture Benefits
+
+1. **Safety**: No unsafe memory sharing or complex pointer arithmetic
+2. **Uniformity**: WASM modules already work this way; native modules will too
+3. **Language Agnostic**: Could support Python, JavaScript modules in future
+4. **Testability**: Easy to test with mock JSON messages
+5. **Debugging**: All communication is observable and loggable
+6. **Versioning**: JSON schema can evolve without breaking FFI
+
+### Implementation Impact
+
+1. **Native Modules**: Complete redesign to use message passing
+2. **WASM Modules**: Minor adjustments to align message formats
+3. **ModuleLoader**: Becomes a message router, not a trait object manager
+4. **Module SDK**: Simplified to message builders and parsers
+5. **Testing**: Focus on message contracts, not object interfaces
+
+### Module Capabilities
+
+Through this message-based architecture, modules can:
+- Query any Layer 1 entity data
+- Create new entities of any type
+- Update existing entities (with permission checks)
+- Delete entities (with permission checks)
+- React to system events
+- Maintain their own internal state
+- Perform complex analyses and computations
+
+### Why This Matters
+
+This isn't just a bug fix - it's a fundamental correction to the module system architecture. The original approach of passing trait objects was never going to work safely. This message-based design:
+- Eliminates the segfault issues completely
+- Provides a stable, extensible foundation
+- Aligns with industry best practices
+- Makes the system more maintainable
+
+### Updated Phase 4 Scope
+
+The module system implementation now includes:
+- [x] Basic module loading framework ✅
+- [x] WASM support with Wasmtime ✅
+- [ ] **Message-based FFI protocol** (NEW)
+- [ ] **Native module message handling** (REPLACES trait object approach)
+- [ ] **Unified module communication layer** (NEW)
+- [ ] Module SDK for message building
+- [ ] Module developer documentation
+- [ ] Example modules using new architecture
+
+**Estimated additional work**: 2-3 days to implement proper FFI architecture
 
 ---
 
