@@ -36,7 +36,7 @@ pub struct UpdateEntityRequest {
 }
 
 /// Query request for listing/searching entities
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct QueryRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub entity_types: Option<Vec<EntityType>>,
@@ -51,7 +51,7 @@ pub struct QueryRequest {
 }
 
 /// Search request with advanced filtering
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SearchRequest {
     pub filters: SearchFilters,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -63,7 +63,7 @@ pub struct SearchRequest {
 }
 
 /// Filters for search operations
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
 pub struct SearchFilters {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub entity_types: Option<Vec<EntityType>>,
@@ -88,14 +88,14 @@ pub struct SearchFilters {
 }
 
 /// Sort specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SortSpec {
     pub field: String,
     #[serde(default = "default_sort_order")]
     pub order: SortOrder,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum SortOrder {
     Asc,
@@ -107,7 +107,7 @@ fn default_sort_order() -> SortOrder {
 }
 
 /// Pagination request
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PaginationRequest {
     #[serde(default = "default_limit")]
     pub limit: u32,
@@ -122,12 +122,12 @@ fn default_limit() -> u32 {
 }
 
 /// Bulk operation request
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct BulkOperationRequest {
     pub operations: Vec<BulkOperation>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(tag = "action", rename_all = "lowercase")]
 pub enum BulkOperation {
     Create {
@@ -152,7 +152,7 @@ pub enum BulkOperation {
 // Entity-specific requests (for the hybrid approach)
 
 /// Theory-specific requests
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct BranchTheoryRequest {
     pub branch_name: String,
     pub hypothesis: String,
@@ -161,14 +161,14 @@ pub struct BranchTheoryRequest {
 }
 
 /// Person-specific requests
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct MergePersonsRequest {
     pub primary_id: Uuid,
     pub secondary_id: Uuid,
     pub merge_strategy: MergeStrategy,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum MergeStrategy {
     PreferPrimary,
@@ -176,7 +176,7 @@ pub enum MergeStrategy {
     Manual(HashMap<String, MergeChoice>),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum MergeChoice {
     Primary,
@@ -186,7 +186,7 @@ pub enum MergeChoice {
 }
 
 /// Workspace-specific requests
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct InviteToWorkspaceRequest {
     pub email: String,
     pub role: WorkspaceRole,
@@ -194,7 +194,7 @@ pub struct InviteToWorkspaceRequest {
     pub message: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum WorkspaceRole {
     Owner,
@@ -204,7 +204,7 @@ pub enum WorkspaceRole {
 }
 
 /// Analysis requests
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct StartAnalysisRequest {
     pub analysis_type: AnalysisType,
     pub target_entities: Vec<Uuid>,
@@ -212,7 +212,7 @@ pub struct StartAnalysisRequest {
     pub parameters: Option<HashMap<String, JsonValue>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AnalysisType {
     RelationshipDiscovery,
@@ -223,13 +223,13 @@ pub enum AnalysisType {
 }
 
 /// Subscription request (for real-time updates)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SubscriptionRequest {
     pub subscription_type: SubscriptionType,
     pub params: SubscriptionParams,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SubscriptionType {
     Entity,
@@ -238,7 +238,7 @@ pub enum SubscriptionType {
     Query,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SubscriptionParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub entity_id: Option<Uuid>,
@@ -251,13 +251,13 @@ pub struct SubscriptionParams {
 }
 
 /// Module operation requests
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct LoadModuleRequest {
     pub name: String,
     pub config: ModuleConfig,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct InvokeModuleOperationRequest {
     pub module: String,
     pub operation: String,

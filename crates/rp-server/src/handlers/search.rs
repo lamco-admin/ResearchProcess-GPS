@@ -10,8 +10,9 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::collections::HashMap;
 use uuid::Uuid;
+use utoipa::{ToSchema, IntoParams};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema, IntoParams)]
 pub struct SearchQuery {
     // Required search query
     pub q: String,
@@ -41,7 +42,7 @@ fn default_limit() -> u32 {
     20
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct SearchResponse {
     pub results: Vec<SearchResult>,
     pub total: u64,
@@ -51,7 +52,7 @@ pub struct SearchResponse {
     pub facets: SearchFacets,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct SearchResult {
     #[serde(flatten)]
     pub entity: EntityResponse,
@@ -60,7 +61,7 @@ pub struct SearchResult {
     pub highlights: Option<HashMap<String, Vec<String>>>,
 }
 
-#[derive(Debug, Serialize, Default)]
+#[derive(Debug, Serialize, Default, ToSchema)]
 pub struct SearchFacets {
     pub entity_types: HashMap<String, u32>,
     pub states: HashMap<String, u32>,
@@ -68,6 +69,19 @@ pub struct SearchFacets {
 }
 
 /// Search entities with full-text search
+#[utoipa::path(
+    get,
+    path = "/api/v1/search",
+    params(
+        SearchQuery
+    ),
+    responses(
+        (status = 200, description = "Search results retrieved successfully", body = SearchResponse),
+        (status = 400, description = "Invalid request - search query cannot be empty"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "search"
+)]
 pub async fn search_entities(
     State(state): State<Arc<AppState>>,
     Query(query): Query<SearchQuery>,

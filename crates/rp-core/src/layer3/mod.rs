@@ -50,7 +50,7 @@ pub trait ConfigEntity: Send + Sync + std::fmt::Debug {
 }
 
 /// Configuration source types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub enum ConfigSource {
     /// Loaded from local file
     Local { 
@@ -74,7 +74,7 @@ pub enum ConfigSource {
 }
 
 /// Module type categories
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 pub enum ModuleType {
     /// Data capture and import modules
     Capture,

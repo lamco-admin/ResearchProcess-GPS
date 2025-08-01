@@ -45,7 +45,7 @@ pub struct ListResponse<T> {
 }
 
 /// Search response with facets
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SearchResponse {
     pub results: Vec<EntityResponse>,
     pub total: u64,
@@ -56,7 +56,7 @@ pub struct SearchResponse {
 }
 
 /// Search facets for filtering
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
 pub struct SearchFacets {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub entity_types: Option<HashMap<String, u64>>,
@@ -70,7 +70,7 @@ pub struct SearchFacets {
     pub date_ranges: Option<DateRangeFacets>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct DateRangeFacets {
     pub last_hour: u64,
     pub last_day: u64,
@@ -81,7 +81,7 @@ pub struct DateRangeFacets {
 }
 
 /// Text highlight in search results
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Highlight {
     pub field: String,
     pub snippet: String,
@@ -89,14 +89,14 @@ pub struct Highlight {
 }
 
 /// Bulk operation response
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct BulkOperationResponse {
     pub results: Vec<BulkOperationResult>,
     pub successful: u32,
     pub failed: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct BulkOperationResult {
     pub index: usize,
     pub success: bool,
@@ -111,7 +111,7 @@ pub struct BulkOperationResult {
 }
 
 /// Error detail for failed operations
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ErrorDetail {
     pub code: String,
     pub message: String,
@@ -124,7 +124,7 @@ pub struct ErrorDetail {
 // Entity-specific responses
 
 /// Theory branch response
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct BranchTheoryResponse {
     pub original_id: Uuid,
     pub branch_id: Uuid,
@@ -133,13 +133,13 @@ pub struct BranchTheoryResponse {
 }
 
 /// Person timeline response
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PersonTimelineResponse {
     pub person_id: Uuid,
     pub events: Vec<TimelineEvent>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct TimelineEvent {
     pub event_type: String,
     pub date: Option<String>, // Flexible date format
@@ -153,13 +153,13 @@ pub struct TimelineEvent {
 }
 
 /// Person relationships response
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PersonRelationshipsResponse {
     pub person_id: Uuid,
     pub relationships: Vec<RelationshipInfo>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RelationshipInfo {
     pub relationship_id: Uuid,
     pub relationship_type: String,
@@ -172,13 +172,13 @@ pub struct RelationshipInfo {
 }
 
 /// Workspace members response
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct WorkspaceMembersResponse {
     pub workspace_id: Uuid,
     pub members: Vec<WorkspaceMember>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct WorkspaceMember {
     pub user_id: Uuid,
     pub email: String,
@@ -190,7 +190,7 @@ pub struct WorkspaceMember {
 }
 
 /// Analysis status response
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct AnalysisStatusResponse {
     pub analysis_id: Uuid,
     pub status: AnalysisStatus,
@@ -204,7 +204,7 @@ pub struct AnalysisStatusResponse {
     pub completed_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum AnalysisStatus {
     Pending,
@@ -215,13 +215,13 @@ pub enum AnalysisStatus {
 }
 
 /// Compliance status response
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ComplianceStatusResponse {
     pub entity_id: Uuid,
     pub compliance_results: HashMap<String, ComplianceResult>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ComplianceResult {
     pub standard: String,
     pub version: String,
@@ -230,7 +230,7 @@ pub struct ComplianceResult {
     pub items: Vec<ComplianceItem>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ComplianceItem {
     pub requirement: String,
     pub status: ComplianceItemStatus,
@@ -238,7 +238,7 @@ pub struct ComplianceItem {
     pub notes: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum ComplianceItemStatus {
     Met,
@@ -266,7 +266,7 @@ pub enum HealthStatus {
 }
 
 /// Rate limit information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RateLimitInfo {
     pub limit: u32,
     pub remaining: u32,

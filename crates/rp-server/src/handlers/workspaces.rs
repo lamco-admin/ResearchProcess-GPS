@@ -8,8 +8,9 @@ use rp_storage::{StorageBackend, Transaction};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
+use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct WorkspaceMember {
     pub user_id: Uuid,
     pub role: String,
@@ -17,21 +18,21 @@ pub struct WorkspaceMember {
     pub invited_by: Option<Uuid>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct WorkspaceMembers {
     pub workspace_id: Uuid,
     pub members: Vec<WorkspaceMember>,
     pub total: u64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct InviteMemberRequest {
     pub user_email: String,
     pub role: String,
     pub message: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct InviteMemberResponse {
     pub invitation_id: Uuid,
     pub workspace_id: Uuid,
@@ -40,6 +41,20 @@ pub struct InviteMemberResponse {
 }
 
 /// Get members of a workspace
+#[utoipa::path(
+    get,
+    path = "/api/v1/workspaces/{id}/members",
+    params(
+        ("id" = Uuid, Path, description = "Workspace ID")
+    ),
+    responses(
+        (status = 200, description = "Workspace members retrieved successfully", body = WorkspaceMembers),
+        (status = 404, description = "Workspace not found"),
+        (status = 400, description = "Invalid request - can only get members for Workspace entities"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "workspaces"
+)]
 pub async fn list_workspace_members(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -115,6 +130,21 @@ pub async fn list_workspace_members(
 }
 
 /// Invite a member to workspace
+#[utoipa::path(
+    post,
+    path = "/api/v1/workspaces/{id}/members/invite",
+    params(
+        ("id" = Uuid, Path, description = "Workspace ID")
+    ),
+    request_body = InviteMemberRequest,
+    responses(
+        (status = 201, description = "Member invited successfully", body = InviteMemberResponse),
+        (status = 404, description = "Workspace not found"),
+        (status = 400, description = "Invalid request - can only invite members to Workspace entities"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "workspaces"
+)]
 pub async fn invite_workspace_member(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -213,6 +243,21 @@ pub async fn invite_workspace_member(
 }
 
 /// Remove a member from workspace
+#[utoipa::path(
+    delete,
+    path = "/api/v1/workspaces/{workspace_id}/members/{member_id}",
+    params(
+        ("workspace_id" = Uuid, Path, description = "Workspace ID"),
+        ("member_id" = Uuid, Path, description = "Member ID to remove")
+    ),
+    responses(
+        (status = 204, description = "Member removed successfully"),
+        (status = 404, description = "Workspace or member not found"),
+        (status = 400, description = "Invalid request - cannot remove last owner from workspace"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "workspaces"
+)]
 pub async fn remove_workspace_member(
     State(state): State<Arc<AppState>>,
     Path((workspace_id, member_id)): Path<(Uuid, Uuid)>,
