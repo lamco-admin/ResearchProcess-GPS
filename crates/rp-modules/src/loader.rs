@@ -25,6 +25,11 @@ pub struct ModuleLoader {
     instances: Arc<RwLock<Vec<Box<dyn ModuleInstance>>>>,
 }
 
+/// Information about a loaded module
+pub struct ModuleInfo {
+    pub metadata: ModuleMetadata,
+}
+
 impl ModuleLoader {
     /// Create a new module loader
     pub fn new() -> Result<Self> {
@@ -38,6 +43,82 @@ impl ModuleLoader {
             wasm_engine,
             instances: Arc::new(RwLock::new(Vec::new())),
         })
+    }
+    
+    /// Load a WASM module directly from file path
+    pub async fn load_wasm_module(
+        &self,
+        wasm_path: impl AsRef<Path>,
+        context: ModuleContext,
+        limits: ResourceLimits,
+    ) -> Result<Uuid> {
+        let wasm_path = wasm_path.as_ref();
+        let wasm_bytes = tokio::fs::read(&wasm_path).await?;
+        
+        let module = WasmModule::from_binary(&self.wasm_engine, &wasm_bytes)
+            .map_err(|e| ModuleError::WasmError(e.to_string()))?;
+        
+        // Create metadata
+        let metadata = ModuleMetadata {
+            id: context.instance_id,
+            name: wasm_path.file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("unknown")
+                .to_string(),
+            version: "0.1.0".to_string(),
+            description: "WASM module".to_string(),
+            author: "Unknown".to_string(),
+            license: "Unknown".to_string(),
+            module_type: ModuleType::Wasm,
+            loaded_at: Utc::now(),
+            status: ModuleStatus::Loaded,
+        };
+        
+        let manifest = ModuleManifest::default();
+        
+        let instance = Box::new(WasmModuleInstance {
+            id: context.instance_id,
+            metadata,
+            manifest,
+            module,
+            engine: self.wasm_engine.clone(),
+            context,
+            limits,
+        });
+        
+        let id = instance.id();
+        self.instances.write().push(instance);
+        
+        Ok(id)
+    }
+    
+    /// Check if a module is loaded
+    pub fn is_loaded(&self, id: &Uuid) -> bool {
+        self.instances.read().iter().any(|inst| inst.id() == *id)
+    }
+    
+    /// Get module information
+    pub fn get_module(&self, id: &Uuid) -> Option<ModuleInfo> {
+        self.instances.read()
+            .iter()
+            .find(|inst| inst.id() == *id)
+            .map(|inst| ModuleInfo {
+                metadata: inst.metadata().clone(),
+            })
+    }
+    
+    /// Execute a command on a module
+    pub async fn execute_command(
+        &self,
+        _id: &Uuid,
+        _command: &str,
+        _args: serde_json::Value,
+    ) -> Result<serde_json::Value> {
+        // This would need to be implemented to call into the module
+        // For now, return an error
+        Err(ModuleError::ExecutionError(
+            "Command execution not yet implemented".to_string()
+        ))
     }
     
     /// Load a module from path
@@ -58,7 +139,12 @@ impl ModuleLoader {
                 self.load_native_module(path, manifest, context).await?
             }
             "wasm" => {
-                self.load_wasm_module(path, manifest, context).await?
+                let wasm_path = path.join(format!("{}.wasm", manifest.module.name));
+                let limits = manifest.to_resource_limits()?;
+                let id = self.load_wasm_module(wasm_path, context, limits).await?;
+                // Get the instance we just loaded
+                self.get_instance(&id)
+                    .ok_or_else(|| ModuleError::LoadError("Failed to get loaded instance".to_string()))?
             }
             _ => {
                 return Err(ModuleError::InvalidManifest(
@@ -126,42 +212,6 @@ impl ModuleLoader {
         }))
     }
     
-    /// Load a WASM module
-    async fn load_wasm_module(
-        &self,
-        path: &Path,
-        manifest: ModuleManifest,
-        context: ModuleContext,
-    ) -> Result<Box<dyn ModuleInstance>> {
-        let module_path = path.join(format!("{}.wasm", manifest.module.name));
-        let wasm_bytes = tokio::fs::read(&module_path).await?;
-        
-        let module = WasmModule::from_binary(&self.wasm_engine, &wasm_bytes)
-            .map_err(|e| ModuleError::WasmError(e.to_string()))?;
-        
-        let limits = manifest.to_resource_limits()?;
-        let metadata = ModuleMetadata {
-            id: context.instance_id,
-            name: manifest.module.name.clone(),
-            version: manifest.module.version.clone(),
-            description: manifest.module.description.clone(),
-            author: manifest.module.author.clone(),
-            license: manifest.module.license.clone(),
-            module_type: ModuleType::Wasm,
-            loaded_at: Utc::now(),
-            status: ModuleStatus::Loaded,
-        };
-        
-        Ok(Box::new(WasmModuleInstance {
-            id: context.instance_id,
-            metadata,
-            manifest,
-            module,
-            engine: self.wasm_engine.clone(),
-            context,
-            limits,
-        }))
-    }
     
     /// Get a loaded module instance
     pub fn get_instance(&self, id: &Uuid) -> Option<Box<dyn ModuleInstance>> {

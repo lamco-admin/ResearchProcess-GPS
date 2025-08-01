@@ -1,7 +1,7 @@
 //! Module capability system
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 
 /// Module capabilities define what a module is allowed to do
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -32,6 +32,56 @@ pub struct ModuleCapabilities {
     
     /// Custom capabilities
     pub custom: HashSet<String>,
+    
+    /// Entity permissions map (for more fine-grained control)
+    pub entity_permissions: HashMap<String, EntityPermission>,
+}
+
+impl Default for ModuleCapabilities {
+    fn default() -> Self {
+        Self::none()
+    }
+}
+
+/// Entity-specific permissions
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EntityPermission {
+    pub read: bool,
+    pub write: bool,
+    pub create: bool,
+    pub delete: bool,
+}
+
+impl EntityPermission {
+    /// Create permission with all rights
+    pub fn all() -> Self {
+        Self {
+            read: true,
+            write: true,
+            create: true,
+            delete: true,
+        }
+    }
+    
+    /// Create permission with no rights
+    pub fn none() -> Self {
+        Self {
+            read: false,
+            write: false,
+            create: false,
+            delete: false,
+        }
+    }
+    
+    /// Create read-only permission
+    pub fn read_only() -> Self {
+        Self {
+            read: true,
+            write: false,
+            create: false,
+            delete: false,
+        }
+    }
 }
 
 impl ModuleCapabilities {
@@ -47,6 +97,7 @@ impl ModuleCapabilities {
             network_access: false,
             filesystem_access: false,
             custom: HashSet::new(),
+            entity_permissions: HashMap::new(),
         }
     }
     

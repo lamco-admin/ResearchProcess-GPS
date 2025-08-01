@@ -1,0 +1,24 @@
+[module]
+name = "research-log-wasm"
+version = "0.1.0"
+description = "Research logging and analysis module (WASM version)"
+author = "ResearchProcess-GPS Team"
+license = "MIT"
+type = "wasm"
+
+[capabilities]
+entity_read = ["ResearchLog", "Theory", "Evidence", "Analysis"]
+entity_write = ["ResearchLog", "Analysis"]
+entity_create = ["ResearchLog", "Analysis"]
+event_subscribe = ["Theory.StateChanged", "Evidence.Created"]
+event_emit = ["ResearchLog.*"]
+
+[resources]
+memory_limit = "64MB"
+storage_quota = "10MB"
+cpu_time_limit = "100ms"
+network_access = false
+
+[exports]
+commands = ["create_log", "add_entry", "analyze_activity"]
+ui_components = []

@@ -164,4 +164,9 @@ impl ModuleChannel {
         
         (host_side, module_side)
     }
+    
+    /// Create a new channel with default buffer size
+    pub fn create() -> (mpsc::Sender<ModuleMessage>, mpsc::Receiver<ModuleMessage>) {
+        mpsc::channel(100)
+    }
 }

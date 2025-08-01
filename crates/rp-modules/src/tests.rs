@@ -64,16 +64,16 @@ mod resource_limit_tests {
         let limits = ResourceLimits {
             memory_bytes: 64 * 1024 * 1024, // 64MB
             storage_bytes: 10 * 1024 * 1024, // 10MB
-            cpu_time_limit: Duration::from_millis(100),
+            cpu_time_ms: 100,
             max_concurrent_ops: 10,
             entity_ops_per_minute: 1000,
             events_per_minute: 1000,
-            wasm_table_elements: Some(10000),
-            wasm_instances: Some(10),
+            table_elements: 10000,
+            instances: 10,
         };
         
         assert_eq!(limits.memory_bytes, 64 * 1024 * 1024);
-        assert_eq!(limits.cpu_time_limit, Duration::from_millis(100));
+        assert_eq!(limits.cpu_time_limit(), Duration::from_millis(100));
     }
 }
 

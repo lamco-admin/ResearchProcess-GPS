@@ -21,7 +21,7 @@ pub use manifest::ModuleManifest;
 pub use registry::ModuleRegistry;
 pub use loader::{ModuleLoader, ModuleInstance};
 pub use context::ModuleContext;
-pub use capabilities::{ModuleCapabilities, Capability};
+pub use capabilities::{ModuleCapabilities, Capability, EntityPermission};
 pub use resource_limits::{ResourceLimits, ResourceLimiter};
 pub use communication::{ModuleMessage, ModuleChannel};
 pub use error::{ModuleError, Result};
