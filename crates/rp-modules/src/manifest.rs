@@ -28,6 +28,25 @@ pub struct ModuleManifest {
     pub exports: ModuleExports,
 }
 
+impl Default for ModuleManifest {
+    fn default() -> Self {
+        Self {
+            module: ModuleInfo {
+                name: "unknown".to_string(),
+                version: "0.1.0".to_string(),
+                description: "Unknown module".to_string(),
+                author: "Unknown".to_string(),
+                license: "Unknown".to_string(),
+                module_type: "wasm".to_string(),
+            },
+            capabilities: CapabilityRequests::default(),
+            resources: ResourceRequests::default(),
+            exports: ModuleExports::default(),
+            dependencies: HashMap::new(),
+        }
+    }
+}
+
 /// Module information section
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModuleInfo {
@@ -42,7 +61,7 @@ pub struct ModuleInfo {
 }
 
 /// Capability requests
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct CapabilityRequests {
     #[serde(default)]
     pub entity_read: Vec<String>,
@@ -144,10 +163,11 @@ impl ModuleManifest {
                 format!("Invalid storage quota: {}", self.resources.storage_quota)
             ))?;
         
-        limits.cpu_time_limit = parse_duration(&self.resources.cpu_time_limit)
+        let duration = parse_duration(&self.resources.cpu_time_limit)
             .ok_or_else(|| ModuleError::InvalidManifest(
                 format!("Invalid CPU time limit: {}", self.resources.cpu_time_limit)
             ))?;
+        limits.cpu_time_ms = duration.as_millis() as u64;
         
         if let Some(max_ops) = self.resources.max_concurrent_ops {
             limits.max_concurrent_ops = max_ops;

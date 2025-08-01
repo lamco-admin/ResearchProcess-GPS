@@ -3,6 +3,9 @@
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
+/// Type alias for the test
+pub type ModuleResourceLimits = ResourceLimits;
+
 /// Resource limits for a module
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceLimits {
@@ -12,8 +15,9 @@ pub struct ResourceLimits {
     /// Maximum storage quota in bytes
     pub storage_bytes: usize,
     
-    /// Maximum CPU time per call
-    pub cpu_time_limit: Duration,
+    /// Maximum CPU time per call (in milliseconds for serialization)
+    #[serde(rename = "cpu_time_ms")]
+    pub cpu_time_ms: u64,
     
     /// Maximum number of concurrent operations
     pub max_concurrent_ops: u32,
@@ -25,10 +29,27 @@ pub struct ResourceLimits {
     pub events_per_minute: u32,
     
     /// For WASM: Maximum table elements
-    pub wasm_table_elements: Option<u32>,
+    #[serde(default = "default_table_elements")]
+    pub table_elements: u32,
     
     /// For WASM: Maximum instances
-    pub wasm_instances: Option<u32>,
+    #[serde(default = "default_instances")]
+    pub instances: u32,
+}
+
+fn default_table_elements() -> u32 {
+    10000
+}
+
+fn default_instances() -> u32 {
+    1
+}
+
+impl ResourceLimits {
+    /// Get CPU time limit as Duration
+    pub fn cpu_time_limit(&self) -> Duration {
+        Duration::from_millis(self.cpu_time_ms)
+    }
 }
 
 impl Default for ResourceLimits {
@@ -36,12 +57,12 @@ impl Default for ResourceLimits {
         Self {
             memory_bytes: 64 * 1024 * 1024, // 64 MB
             storage_bytes: 10 * 1024 * 1024, // 10 MB
-            cpu_time_limit: Duration::from_millis(100),
+            cpu_time_ms: 100,
             max_concurrent_ops: 10,
             entity_ops_per_minute: 1000,
             events_per_minute: 1000,
-            wasm_table_elements: Some(10000),
-            wasm_instances: Some(1),
+            table_elements: 10000,
+            instances: 1,
         }
     }
 }
@@ -119,10 +140,6 @@ impl wasmtime::ResourceLimiter for WasmtimeResourceLimiter {
         desired: u32,
         _maximum: Option<u32>,
     ) -> anyhow::Result<bool> {
-        if let Some(limit) = self.limits.wasm_table_elements {
-            Ok(desired <= limit)
-        } else {
-            Ok(true)
-        }
+        Ok(desired <= self.limits.table_elements)
     }
 }
