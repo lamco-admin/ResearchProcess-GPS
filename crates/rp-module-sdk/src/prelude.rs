@@ -26,5 +26,7 @@ pub use rp_modules::{
 pub use async_trait::async_trait;
 
 // Common result types
+/// Result type for command execution
 pub type CommandResult = Result<Value>;
+/// Result type for event handling
 pub type EventResult = Result<()>;

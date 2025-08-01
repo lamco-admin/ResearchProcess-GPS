@@ -2,7 +2,8 @@
 
 use std::path::Path;
 use std::sync::Arc;
-use parking_lot::{RwLock, Mutex};
+use parking_lot::RwLock;
+use tokio::sync::Mutex;
 use uuid::Uuid;
 use chrono::Utc;
 
@@ -17,12 +18,13 @@ use crate::{
 };
 
 /// Module loader handles loading both native and WASM modules
+#[derive(Clone)]
 pub struct ModuleLoader {
     /// WASM engine (shared across all WASM modules)
     wasm_engine: Engine,
     
     /// Loaded module instances
-    instances: Arc<RwLock<Vec<Box<dyn ModuleInstance>>>>,
+    instances: Arc<RwLock<Vec<Arc<Mutex<Box<dyn ModuleInstance>>>>>>,
 }
 
 /// Information about a loaded module
@@ -88,23 +90,29 @@ impl ModuleLoader {
         });
         
         let id = instance.id();
-        self.instances.write().push(instance);
+        self.instances.write().push(Arc::new(Mutex::new(instance)));
         
         Ok(id)
     }
     
     /// Check if a module is loaded
     pub fn is_loaded(&self, id: &Uuid) -> bool {
-        self.instances.read().iter().any(|inst| inst.id() == *id)
+        self.instances.read().iter().any(|inst| {
+            inst.try_lock().map(|i| i.id() == *id).unwrap_or(false)
+        })
     }
     
     /// Get module information
     pub fn get_module(&self, id: &Uuid) -> Option<ModuleInfo> {
         self.instances.read()
             .iter()
-            .find(|inst| inst.id() == *id)
-            .map(|inst| ModuleInfo {
-                metadata: inst.metadata().clone(),
+            .find(|inst| {
+                inst.try_lock().map(|i| i.id() == *id).unwrap_or(false)
+            })
+            .and_then(|inst| {
+                inst.try_lock().ok().map(|i| ModuleInfo {
+                    metadata: i.metadata().clone(),
+                })
             })
     }
     
@@ -117,24 +125,25 @@ impl ModuleLoader {
     ) -> Result<serde_json::Value> {
         // For WASM modules, we need to call the execute_command export directly
         // Check if this is a WASM module by trying to downcast
-        let mut instances = self.instances.write();
-        let instance_index = instances.iter().position(|inst| inst.id() == *id)
+        let instances = self.instances.read();
+        let instance = instances.iter()
+            .find(|inst| {
+                inst.try_lock().map(|i| i.id() == *id).unwrap_or(false)
+            })
             .ok_or_else(|| ModuleError::NotFound(id.to_string()))?;
         
-        let instance = instances.get_mut(instance_index)
-            .ok_or_else(|| ModuleError::NotFound(id.to_string()))?;
+        // Clone the Arc to avoid holding the lock
+        let instance_arc = instance.clone();
+        drop(instances);
         
         // Try to execute command directly on WASM module
-        if let Some(wasm_instance) = instance.as_any_mut().downcast_mut::<WasmModuleInstance>() {
+        let mut instance_guard = instance_arc.lock().await;
+        if let Some(wasm_instance) = instance_guard.as_any_mut().downcast_mut::<WasmModuleInstance>() {
             return wasm_instance.execute_wasm_command(command, args).await;
         }
+        drop(instance_guard);
         
         // For native modules, use the channel approach
-        drop(instances);
-        let instances = self.instances.read();
-        let instance = instances.get(instance_index)
-            .ok_or_else(|| ModuleError::NotFound(id.to_string()))?;
-        
         // Create a unique request ID
         let request_id = Uuid::new_v4();
         
@@ -145,16 +154,28 @@ impl ModuleLoader {
             args 
         };
         
-        // Send message to module through its channel
-        instance.context().host_channel.send(message).await
-            .map_err(|e| ModuleError::CommunicationError(format!("Failed to send command: {}", e)))?;
+        // Get the instance again to send the message
+        let instances = self.instances.read();
+        let instance = instances.iter()
+            .find(|inst| {
+                inst.try_lock().map(|i| i.id() == *id).unwrap_or(false)
+            })
+            .ok_or_else(|| ModuleError::NotFound(id.to_string()))?;
         
-        // For a robust implementation, we should wait for CommandResponse
-        // For now, return a basic response to allow testing to proceed
+        let instance_guard = instance.try_lock()
+            .map_err(|_| ModuleError::CommunicationError("Module is locked".to_string()))?;
+        
+        // Send message to module through its channel
+        instance_guard.context().host_channel.send(message).await
+            .map_err(|e| ModuleError::CommunicationError(format!("Failed to send command: {}", e)))?;
+        drop(instance_guard);
+        drop(instances);
+        
+        // For now, return a placeholder response since we don't have a response channel yet
+        // TODO: Implement proper command response handling
         Ok(serde_json::json!({
-            "log_id": Uuid::new_v4(),
-            "status": "created",
-            "message": "Research log created successfully"
+            "status": "sent",
+            "request_id": request_id
         }))
     }
     
@@ -175,7 +196,7 @@ impl ModuleLoader {
             "native" => {
                 let instance = self.load_native_module(path, manifest, context).await?;
                 let id = instance.id();
-                self.instances.write().push(instance);
+                self.instances.write().push(Arc::new(Mutex::new(instance)));
                 Ok(id)
             }
             "wasm" => {
@@ -246,29 +267,30 @@ impl ModuleLoader {
     
     
     /// Get a loaded module instance
-    pub fn get_instance(&self, id: &Uuid) -> Option<Box<dyn ModuleInstance>> {
-        self.instances.read()
-            .iter()
-            .find(|inst| inst.id() == *id)
-            .map(|inst| inst.clone_box())
+    pub fn get_instance(&self, _id: &Uuid) -> Option<Box<dyn ModuleInstance>> {
+        // This method might need to be removed or rethought since we can't clone trait objects
+        None
     }
     
     /// Initialize a module
     pub async fn initialize_module(&self, id: &Uuid) -> Result<()> {
         let instances = self.instances.read();
-        let instance_index = instances.iter().position(|inst| inst.id() == *id)
+        let instance = instances.iter()
+            .find(|inst| {
+                inst.try_lock().map(|i| i.id() == *id).unwrap_or(false)
+            })
             .ok_or_else(|| ModuleError::NotFound(id.to_string()))?;
+        
+        // Clone the Arc to avoid holding the lock
+        let instance_arc = instance.clone();
         drop(instances);
         
-        // Need to get mutable access to the specific instance
-        let mut instances = self.instances.write();
-        let instance = instances.get_mut(instance_index)
-            .ok_or_else(|| ModuleError::NotFound(id.to_string()))?;
-        
-        instance.initialize().await?;
+        // Get mutable access to the specific instance
+        let mut instance_guard = instance_arc.lock().await;
+        instance_guard.initialize().await?;
         
         // Update status to Running
-        match instance.metadata_mut() {
+        match instance_guard.metadata_mut() {
             Some(metadata) => metadata.status = ModuleStatus::Running,
             None => return Err(ModuleError::InitializationError("Failed to update module status".to_string())),
         }
@@ -278,25 +300,32 @@ impl ModuleLoader {
     
     /// Run a module
     pub async fn run_module(&self, id: &Uuid) -> Result<()> {
-        let instances = self.instances.read();
-        let instance_index = instances.iter().position(|inst| inst.id() == *id)
-            .ok_or_else(|| ModuleError::NotFound(id.to_string()))?;
-        drop(instances);
+        // Find and clone the instance Arc
+        let instance_arc = {
+            let instances = self.instances.read();
+            instances.iter()
+                .find(|inst| {
+                    inst.try_lock().map(|i| i.id() == *id).unwrap_or(false)
+                })
+                .ok_or_else(|| ModuleError::NotFound(id.to_string()))?
+                .clone()
+        };
         
-        let mut instances = self.instances.write();
-        let instance = instances.get_mut(instance_index)
-            .ok_or_else(|| ModuleError::NotFound(id.to_string()))?;
-        
-        instance.run().await
+        // Now run without holding any outer locks
+        let mut instance_guard = instance_arc.lock().await;
+        instance_guard.run().await
     }
     
     /// Unload a module
     pub async fn unload_module(&self, id: Uuid) -> Result<()> {
         let mut instances = self.instances.write();
         
-        if let Some(pos) = instances.iter().position(|inst| inst.id() == id) {
-            let mut instance = instances.remove(pos);
-            instance.shutdown().await?;
+        if let Some(pos) = instances.iter().position(|inst| {
+            inst.try_lock().map(|i| i.id() == id).unwrap_or(false)
+        }) {
+            let instance = instances.remove(pos);
+            let mut instance_guard = instance.lock().await;
+            instance_guard.shutdown().await?;
         }
         
         Ok(())
@@ -433,7 +462,7 @@ impl ModuleInstance for WasmModuleInstance {
         }
         
         // Store the runtime
-        *self.runtime.lock() = Some(WasmRuntime {
+        *self.runtime.lock().await = Some(WasmRuntime {
             store,
             instance,
         });
@@ -474,7 +503,7 @@ impl ModuleInstance for WasmModuleInstance {
 impl WasmModuleInstance {
     /// Execute a command on the WASM module
     async fn execute_wasm_command(&mut self, command: &str, args: serde_json::Value) -> Result<serde_json::Value> {
-        let mut runtime_guard = self.runtime.lock();
+        let mut runtime_guard = self.runtime.lock().await;
         let runtime = runtime_guard.as_mut()
             .ok_or_else(|| ModuleError::ExecutionError("Module not initialized".to_string()))?;
         
@@ -620,10 +649,12 @@ impl ModuleInstance for NativeModuleInstance {
         }
         
         // The module returns a Box<dyn ResearchModule> as a raw pointer
-        // We reconstruct it from the pointer
+        // We need to cast it back from c_void
         let mut module = unsafe {
-            let boxed_ptr = module_ptr as *mut Box<dyn ResearchModule>;
-            *Box::from_raw(boxed_ptr)
+            // Cast the c_void pointer to a raw pointer to Box<dyn ResearchModule>
+            let boxed_trait = module_ptr as *mut Box<dyn ResearchModule>;
+            // Dereference to get the Box<dyn ResearchModule>
+            *Box::from_raw(boxed_trait)
         };
         
         // Initialize the module with context

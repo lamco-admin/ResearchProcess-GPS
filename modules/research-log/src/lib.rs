@@ -241,6 +241,7 @@ impl ResearchModule for ResearchLogModule {
 pub extern "C" fn _create_module() -> *mut std::ffi::c_void {
     let module = Box::new(ResearchLogModule::new());
     let module_box: Box<dyn ResearchModule> = module;
+    // Double box to make FFI safe
     Box::into_raw(Box::new(module_box)) as *mut std::ffi::c_void
 }
 
