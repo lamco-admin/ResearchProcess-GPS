@@ -163,7 +163,7 @@ impl ResearchLogModule {
 
         // In a real implementation, we would emit an event through the host
         json!({
-            "status": "success",
+            "status": "created",
             "log_id": log_id,
             "title": title,
             "message": "Research log created",

@@ -20,6 +20,8 @@ pub mod error;
 pub mod module;
 pub mod command;
 pub mod event;
+pub mod messages;
+pub mod ffi;
 
 #[cfg(feature = "native")]
 pub mod native;
@@ -34,6 +36,8 @@ pub use error::{ModuleError, Result};
 pub use module::{Module, ModuleContext, ModuleInfo, ModuleInfoBuilder};
 pub use command::{Command, CommandHandler, CommandRouter, CommandResponse};
 pub use event::{Event, EventHandler, EventRouter};
+
+// The FFI macro is exported by the macro_rules! itself
 
 // Re-export module types
 pub use rp_modules::communication::ModuleMessage;

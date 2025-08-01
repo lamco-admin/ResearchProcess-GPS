@@ -16,7 +16,7 @@ use libloading::{Library, Symbol};
 use crate::{
     ModuleMetadata, ModuleManifest, module::{ModuleType, ModuleStatus},
     ModuleContext, ResourceLimits, resource_limits::WasmtimeResourceLimiter,
-    Result, ModuleError, ModuleMessage
+    Result, ModuleError
 };
 
 /// Module loader handles loading both native and WASM modules
@@ -377,7 +377,6 @@ type HandleMessageFn = unsafe extern "C" fn(
     payload: *const c_char,
 ) -> *mut c_char;
 type FreeStringFn = unsafe extern "C" fn(*mut c_char);
-type GetModuleMetadataFn = unsafe extern "C" fn() -> *mut c_char;
 
 struct NativeModuleInstance {
     id: Uuid,
@@ -386,11 +385,23 @@ struct NativeModuleInstance {
     manifest: ModuleManifest,
     library: Arc<Library>,
     context: ModuleContext,
-    module_ptr: Option<std::sync::atomic::AtomicPtr<std::ffi::c_void>>,
+    module_ptr: Option<AtomicPtr<std::ffi::c_void>>,
     handle_message_fn: Option<Symbol<'static, HandleMessageFn>>,
     destroy_module_fn: Option<Symbol<'static, DestroyModuleFn>>,
     free_string_fn: Option<Symbol<'static, FreeStringFn>>,
 }
+
+// SAFETY: NativeModuleInstance is Send because:
+// - All fields except AtomicPtr are already Send
+// - AtomicPtr provides thread-safe access to the raw pointer
+// - The FFI functions are stateless function pointers
+unsafe impl Send for NativeModuleInstance {}
+
+// SAFETY: NativeModuleInstance is Sync because:
+// - AtomicPtr provides atomic access to the module pointer
+// - All FFI operations go through the atomic pointer
+// - The module itself handles thread safety internally
+unsafe impl Sync for NativeModuleInstance {}
 
 impl NativeModuleInstance {
     /// Send a message to the module and get the response
@@ -740,20 +751,28 @@ impl ModuleInstance for NativeModuleInstance {
     }
     
     async fn shutdown(&mut self) -> Result<()> {
-        if let Some(atomic_ptr) = self.module_ptr.take() {
+        // Send shutdown message first (while module is still valid)
+        if self.module_ptr.is_some() {
+            let _ = self.send_message("shutdown", serde_json::json!({})).await;
+        }
+        
+        // Now destroy the module (no await after this point)
+        if let Some(atomic_ptr) = &self.module_ptr {
             let module_ptr = atomic_ptr.load(Ordering::Acquire);
             if !module_ptr.is_null() {
-                // Send shutdown message
-                let _ = self.send_message("shutdown", serde_json::json!({})).await;
-                
                 // Call destroy_module to clean up
                 if let Some(destroy_fn) = &self.destroy_module_fn {
                     unsafe {
                         destroy_fn(module_ptr);
                     }
                 }
+                
+                // Clear the pointer after destroying
+                atomic_ptr.store(std::ptr::null_mut(), Ordering::Release);
             }
         }
+        // Clear the Option to indicate shutdown
+        self.module_ptr = None;
         Ok(())
     }
     
