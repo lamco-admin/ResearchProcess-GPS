@@ -4,9 +4,10 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
 use uuid::Uuid;
+use utoipa::ToSchema;
 
 /// Entity identifier using UUID v7 (time-ordered)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
 #[serde(transparent)]
 pub struct EntityId(Uuid);
 

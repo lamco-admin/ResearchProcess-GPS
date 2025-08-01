@@ -32,19 +32,19 @@ Please perform a comprehensive session handover following these steps:
    - List specific next tasks with clear instructions
    - Include any workarounds or important context
 
-4. GIT OPERATIONS:
-   - Stage all changes: git add -A
-   - Create detailed commit message summarizing session work
-   - Commit with: git commit -m "[message]"
-   - Push to origin: git push
-
-5. GENERATE NEXT SESSION PROMPT:
+4. GENERATE NEXT SESSION PROMPT:
    - Create NEXT_SESSION_PROMPT_[YYYY_MM_DD_HHMM_TIMEZONE].md
    - Include instruction to read the comprehensive handover FIRST
    - Reference the updated Master Plan
    - List the specific next tasks to tackle
    - Include all critical context (DB connection, ports, etc.)
    - reproduce the prompt in the chat so opening the file isn't necessary
+
+5.  GIT OPERATIONS:
+   - Stage all changes: git add -A
+   - Create detailed commit message summarizing session work
+   - Commit with: git commit -m "[message]"
+   - Push to origin: git push
 
 Remember to maintain NO_FALLBACK_POLICY throughout all work.
 ```

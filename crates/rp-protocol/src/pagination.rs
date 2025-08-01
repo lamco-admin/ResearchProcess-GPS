@@ -1,10 +1,10 @@
 //! Pagination utilities and types
 
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+use utoipa::{ToSchema, IntoParams};
 
 /// Pagination parameters
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, IntoParams)]
 pub struct PaginationParams {
     /// Maximum number of items to return
     #[serde(default = "default_page_size")]
@@ -58,7 +58,7 @@ impl PaginationParams {
 }
 
 /// Pagination metadata for responses
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PaginationMeta {
     pub total: u64,
     pub limit: u32,
@@ -89,7 +89,7 @@ impl PaginationMeta {
 }
 
 /// Cursor for cursor-based pagination
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Cursor {
     pub value: String,
     pub timestamp: i64,

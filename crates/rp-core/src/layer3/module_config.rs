@@ -11,13 +11,14 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use validator::Validate;
+use utoipa::ToSchema;
 
 use super::{
     ConfigEntity, ConfigSource, ModuleConfigId, ModuleType,
 };
 
 /// Module-specific metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ModuleMetadata {
     /// Unique ID for this module configuration
     pub id: ModuleConfigId,
@@ -45,7 +46,7 @@ pub struct ModuleMetadata {
 }
 
 /// Module capability declaration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Capability {
     /// Capability name (e.g., "evidence.analyze.dna")
     pub name: String,
@@ -58,7 +59,7 @@ pub struct Capability {
 }
 
 /// Module dependency declaration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Dependency {
     /// Required module key
     pub module_key: String,
@@ -71,7 +72,7 @@ pub struct Dependency {
 }
 
 /// Settings schema using JSON Schema
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SettingsSchema {
     /// JSON Schema for module settings
     pub schema: serde_json::Value,
@@ -81,7 +82,7 @@ pub struct SettingsSchema {
 }
 
 /// Module resource reference
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ResourceRef {
     /// Resource type (e.g., "template", "validator", "script")
     pub resource_type: String,
@@ -94,7 +95,7 @@ pub struct ResourceRef {
 }
 
 /// Module lifecycle hooks
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct LifecycleHooks {
     /// Called when module is loaded
     pub on_load: Option<String>,
@@ -110,7 +111,7 @@ pub struct LifecycleHooks {
 }
 
 /// Configuration for a pluggable module
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, ToSchema)]
 pub struct ModuleConfig {
     /// Module-specific metadata
     pub metadata: ModuleMetadata,

@@ -1,7 +1,7 @@
 # ResearchProcess-GPS Master Implementation Plan
 ## Comprehensive Project Architecture & Roadmap
-### Timestamp: 2025-08-01 02:53:00 EEST  
-### Version: 2.7 - OpenAPI Implementation Started, Note Entity Clarified
+### Timestamp: 2025-08-01 03:25:00 EEST  
+### Version: 2.8 - OpenAPI Completed, Phase 4-8 Details Restored
 
 ---
 
@@ -26,9 +26,9 @@
 4. **Extensible**: Module system for custom research tools
 
 ### Implementation Success
-- **Entities Implemented**: 19 Entity + 5 ConfigEntity implementations
+- **Entities Implemented**: 18 Entity + 5 ConfigEntity implementations
 - **Design Evolution**: Improved from original concept through thoughtful decisions
-- **EntityType Enum**: ✅ FIXED - Now has all 19 entities
+- **EntityType Enum**: ✅ FIXED - Now has all 18 entities
 - **NO_FALLBACK_POLICY**: ✅ 100% Compliant
 
 ---
@@ -117,7 +117,7 @@ The original conceptual model has been refined through implementation experience
 │  Event Store • CQRS • Projections • Time Travel           │
 ├─────────────────────────────────────────────────────────────┤
 │                   Core Domain Layer (Phase 1)               │
-│  19 Entities • States • Validation • Business Logic        │
+│  18 Entities • States • Validation • Business Logic        │
 ├─────────────────────────────────────────────────────────────┤
 │                    Storage Abstraction                      │
 │  PostgreSQL • Git (future) • S3 (future)                  │
@@ -129,7 +129,7 @@ The original conceptual model has been refined through implementation experience
 ```
 researchprocess-gps/
 ├── crates/
-│   ├── rp-core/              # ✅ Complete: 19 entities
+│   ├── rp-core/              # ✅ Complete: 18 entities
 │   ├── rp-storage/           # ✅ Complete: Storage abstraction
 │   ├── rp-storage-postgres/  # ✅ Complete: PostgreSQL adapter
 │   ├── rp-events/            # ✅ Complete: Event sourcing
@@ -147,7 +147,7 @@ researchprocess-gps/
 
 ### ✅ Phase 1: Foundation (100% Complete)
 **Achievement**: Successfully implemented evolved entity model
-- 19 entities reflecting refined design
+- 18 entities reflecting refined design
 - PostgreSQL storage with full CRUD
 - State machines and validation
 - Event sourcing foundation
@@ -174,12 +174,97 @@ researchprocess-gps/
 ### 🚧 Phase 4-8: Future Development
 Clear roadmap for remaining features without revisiting core design
 
+#### Phase 4: Module System (Months 4-5)
+**Goal**: Extensible module framework
+
+**Deliverables**:
+- [ ] `rp-modules` crate
+- [ ] Module loading system
+- [ ] WASM sandbox for untrusted modules
+- [ ] Module registry and discovery
+- [ ] Hot-reload capability
+- [ ] Example modules (Research Log, Evidence Matrix)
+
+**Technical Decisions Needed**:
+- WASM vs native modules (or both?)
+- Module communication protocol
+- Resource limits for modules
+- Module packaging format
+
+#### Phase 5: Collaboration Features (Months 5-6)
+**Goal**: Real-time collaboration and conflict resolution
+
+**Deliverables**:
+- [ ] CRDT implementation for entities
+- [ ] Conflict resolution engine
+- [ ] Real-time collaboration protocol
+- [ ] Workspace management enhancements
+- [ ] Permission system
+- [ ] Collaboration test suite
+
+**Technical Decisions Needed**:
+- CRDT vs OT for collaboration
+- Conflict resolution strategies
+- Offline support approach
+- Sync protocol design
+
+#### Phase 6: Web Interface (Months 6-8)
+**Goal**: Professional web interface
+
+**Deliverables**:
+- [ ] `rp-web` crate (Leptos/Yew)
+- [ ] Workspace management UI
+- [ ] Entity browsers and editors
+- [ ] Analysis visualization
+- [ ] Real-time collaboration UI
+- [ ] Module UI framework
+
+**Technical Decisions Needed**:
+- Leptos vs Yew vs Dioxus
+- WASM component strategy
+- State management approach
+- UI/UX design system
+
+#### Phase 7: Advanced Features (Months 8-10)
+**Goal**: Professional genealogy features
+
+**Deliverables**:
+- [ ] Advanced query language
+- [ ] Report generation system
+- [ ] Import/export framework
+- [ ] GEDCOM 7 adapter
+- [ ] External API integrations
+- [ ] Advanced analysis modules
+
+**Technical Decisions Needed**:
+- Query language design (GraphQL-like?)
+- Report template system
+- API rate limiting strategy (building on Phase 3)
+- External service abstractions
+
+#### Phase 8: Production Readiness (Months 10-12)
+**Goal**: Production deployment capabilities
+
+**Deliverables**:
+- [ ] Deployment automation
+- [ ] Monitoring and metrics
+- [ ] Backup and recovery
+- [ ] Performance optimization
+- [ ] Security audit
+- [ ] Comprehensive documentation
+
+**Technical Decisions Needed**:
+- Deployment architecture (K8s?)
+- Monitoring stack (OpenTelemetry?)
+- Backup strategies
+- High availability design
+
 ---
 
 ## 🛠️ TECHNICAL CLARIFICATIONS
 
 ### EntityType Enum Fixed ✅
-The enum now has all 19 entries matching all implemented entities.
+The enum now has all 18 entries matching all implemented entities.
 
 ### NO_FALLBACK_POLICY Complete ✅
 - 100% of violations fixed
@@ -226,6 +311,18 @@ This is the mark of a healthy project that improves during implementation rather
 
 ## 🔄 CHANGE LOG
 
+### 2025-08-01 03:25 EEST - Version 2.8
+- **COMPLETED OpenAPI implementation** - All handlers annotated, all types have ToSchema
+  - Fixed all compilation errors by adding ToSchema to ~30 types
+  - Added IntoParams for PaginationParams
+  - Server builds and runs successfully
+  - OpenAPI JSON endpoint working at `/api-docs/openapi.json`
+  - Swagger UI accessible at `/swagger-ui/`
+- **RESTORED Phase 4-8 details** from ULTRATHINK plan
+  - Added comprehensive deliverables for each phase
+  - Added technical decisions needed for each phase
+  - Phases now have clear goals and concrete tasks
+
 ### 2025-08-01 02:53 EEST - Version 2.7
 - **CLARIFIED entity count** - Actually 18 entities, not 19 (Note was never implemented)
 - **STARTED OpenAPI implementation** with utoipa
@@ -254,7 +351,7 @@ This is the mark of a healthy project that improves during implementation rather
 - Created comprehensive completion report
 
 ### 2025-08-01 01:36 EEST - Version 2.4.1
-- Completed EntityType enum fix - now has all 19 entities
+- Completed EntityType enum fix - now has all 18 entities
 - Renamed EvidenceAnalysis to AnalysisReport throughout codebase
 - Fixed entity_type_mapper to remove NO_FALLBACK_POLICY violations
 - Discovered and documented NestableEntity trait pattern
@@ -288,8 +385,8 @@ During detailed analysis, significant architectural inconsistencies were discove
 
 ### Key Findings:
 
-1. **Actual Entity Count**: 19 Entity implementations + 5 ConfigEntity implementations (not 22)
-2. **EntityType Enum**: ✅ FIXED - Now has 19 entries
+1. **Actual Entity Count**: 18 Entity implementations + 5 ConfigEntity implementations (not 22)
+2. **EntityType Enum**: ✅ FIXED - Now has 18 entries
 3. **NO_FALLBACK_POLICY Violations**: ✅ FIXED - 100% compliant
 4. **Layer Misclassification**: Theory belongs in Layer 2, ProofStatement is a WorkProduct
 5. **Naming Issues**: ✅ FIXED - EvidenceAnalysis renamed to AnalysisReport
@@ -311,7 +408,7 @@ During detailed analysis, significant architectural inconsistencies were discove
 
 ### Required Actions (Updated 2025-08-01 02:16):
 
-1. **Fix EntityType enum** - ✅ COMPLETED - Now has 19 entries
+1. **Fix EntityType enum** - ✅ COMPLETED - Now has 18 entries
 2. **Remove fallback behavior** - ✅ COMPLETED - 100% compliant
 3. **Clarify architecture** - ✅ COMPLETED - NestableEntity pattern documented
 4. **Rename entities** - ✅ COMPLETED - EvidenceAnalysis → AnalysisReport
@@ -358,19 +455,16 @@ See detailed reports:
 
 ## 📋 DEFERRED WORK LOG
 
-### From This Session (2025-08-01 02:53)
-1. **OpenAPI Implementation** - Started but requires comprehensive work:
-   - Need to add #[utoipa::path(...)] annotations to ALL handler functions
-   - Need to add ToSchema derives to all request/response types
-   - Need to resolve module import issues with utoipa macros
-   - Missing types: SearchParams, BranchTheoryRequest, MergePersonsRequest, InviteMemberRequest
-2. **Phase 4-8 Details** - Need to restore from ULTRATHINK plan in next session
+### From This Session (2025-08-01 03:25)
+1. **Update documentation references** - ✅ COMPLETED
 
 ### From Previous Sessions
-1. OpenAPI documentation (Phase 3)
-2. Rate limiting implementation (Phase 3 - optional)
-3. Client library development (Phase 4)
-4. Module system design (Phase 5)
+1. Rate limiting implementation (Phase 3 - optional)
+2. Module system implementation (Phase 4)
+3. Collaboration features (Phase 5)
+4. Web interface development (Phase 6)
+5. Advanced features (Phase 7)
+6. Production readiness (Phase 8)
 
 ---
 

@@ -10,14 +10,15 @@ use rp_storage::{StorageBackend, Transaction};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
+use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct BranchTheoryRequest {
     pub branch_name: String,
     pub hypothesis: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct BranchTheoryResponse {
     pub id: Uuid,
     pub parent_theory_id: Uuid,
@@ -26,14 +27,14 @@ pub struct BranchTheoryResponse {
     pub version: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct ComplianceStatus {
     pub compliant: bool,
     pub issues: Vec<ComplianceIssue>,
     pub checked_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct ComplianceIssue {
     pub rule_id: String,
     pub severity: String,
@@ -41,6 +42,21 @@ pub struct ComplianceIssue {
 }
 
 /// Create a branch from an existing theory
+#[utoipa::path(
+    post,
+    path = "/api/v1/theories/{id}/branch",
+    params(
+        ("id" = Uuid, Path, description = "Theory ID to branch from")
+    ),
+    request_body = BranchTheoryRequest,
+    responses(
+        (status = 201, description = "Theory branch created successfully", body = BranchTheoryResponse),
+        (status = 404, description = "Theory not found"),
+        (status = 400, description = "Invalid request - can only branch from Theory entities"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "theories"
+)]
 pub async fn branch_theory(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -120,6 +136,20 @@ pub async fn branch_theory(
 }
 
 /// Get all evidence associated with a theory
+#[utoipa::path(
+    get,
+    path = "/api/v1/theories/{id}/evidence",
+    params(
+        ("id" = Uuid, Path, description = "Theory ID")
+    ),
+    responses(
+        (status = 200, description = "Evidence list retrieved successfully", body = ListResponse<EntityResponse>),
+        (status = 404, description = "Theory not found"),
+        (status = 400, description = "Invalid request - can only get evidence for Theory entities"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "theories"
+)]
 pub async fn get_theory_evidence(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -190,6 +220,20 @@ pub async fn get_theory_evidence(
 }
 
 /// Get compliance status for a theory
+#[utoipa::path(
+    get,
+    path = "/api/v1/theories/{id}/compliance-status",
+    params(
+        ("id" = Uuid, Path, description = "Theory ID")
+    ),
+    responses(
+        (status = 200, description = "Compliance status retrieved successfully", body = ComplianceStatus),
+        (status = 404, description = "Theory not found"),
+        (status = 400, description = "Invalid request - can only check compliance for Theory entities"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "theories"
+)]
 pub async fn get_theory_compliance_status(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,

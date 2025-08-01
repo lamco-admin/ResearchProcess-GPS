@@ -7,8 +7,9 @@ use rp_storage::{StorageBackend, Transaction};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
+use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct TimelineEvent {
     pub date: chrono::NaiveDate,
     pub event_type: String,
@@ -17,13 +18,13 @@ pub struct TimelineEvent {
     pub confidence: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct PersonTimeline {
     pub person_id: Uuid,
     pub events: Vec<TimelineEvent>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct PersonRelationship {
     pub relationship_id: Uuid,
     pub relationship_type: String,
@@ -34,20 +35,20 @@ pub struct PersonRelationship {
     pub confidence: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct PersonRelationships {
     pub person_id: Uuid,
     pub relationships: Vec<PersonRelationship>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct MergePersonsRequest {
     pub target_person_id: Uuid,
     pub merge_strategy: String, // "prefer_source", "prefer_target", "manual"
     pub field_overrides: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct MergePersonsResponse {
     pub merged_person_id: Uuid,
     pub version: i64,
@@ -55,6 +56,20 @@ pub struct MergePersonsResponse {
 }
 
 /// Get timeline of events for a person
+#[utoipa::path(
+    get,
+    path = "/api/v1/persons/{id}/timeline",
+    params(
+        ("id" = Uuid, Path, description = "Person ID")
+    ),
+    responses(
+        (status = 200, description = "Person timeline retrieved successfully", body = PersonTimeline),
+        (status = 404, description = "Person not found"),
+        (status = 400, description = "Invalid request - can only get timeline for Person entities"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "persons"
+)]
 pub async fn get_person_timeline(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -173,6 +188,20 @@ pub async fn get_person_timeline(
 }
 
 /// Get all relationships for a person
+#[utoipa::path(
+    get,
+    path = "/api/v1/persons/{id}/relationships",
+    params(
+        ("id" = Uuid, Path, description = "Person ID")
+    ),
+    responses(
+        (status = 200, description = "Person relationships retrieved successfully", body = PersonRelationships),
+        (status = 404, description = "Person not found"),
+        (status = 400, description = "Invalid request - can only get relationships for Person entities"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "persons"
+)]
 pub async fn get_person_relationships(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -282,6 +311,21 @@ pub async fn get_person_relationships(
 }
 
 /// Merge two person entities
+#[utoipa::path(
+    post,
+    path = "/api/v1/persons/{id}/merge",
+    params(
+        ("id" = Uuid, Path, description = "Source person ID to merge from")
+    ),
+    request_body = MergePersonsRequest,
+    responses(
+        (status = 200, description = "Persons merged successfully", body = MergePersonsResponse),
+        (status = 404, description = "Person not found"),
+        (status = 400, description = "Invalid request - invalid merge strategy or missing required fields"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "persons"
+)]
 pub async fn merge_persons(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,

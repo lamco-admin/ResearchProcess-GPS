@@ -15,8 +15,20 @@ use serde_json::Value;
 use sqlx;
 use std::sync::Arc;
 use uuid::Uuid;
+use utoipa::ToSchema;
 
-// Create a new entity
+/// Create a new entity
+#[utoipa::path(
+    post,
+    path = "/api/v1/entities",
+    request_body = CreateEntityRequest,
+    responses(
+        (status = 201, description = "Entity created successfully", body = EntityResponse),
+        (status = 400, description = "Invalid request"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "entities"
+)]
 pub async fn create_entity(
     State(state): State<Arc<AppState>>,
     Json(request): Json<CreateEntityRequest>,
@@ -74,7 +86,20 @@ pub async fn create_entity(
     Ok((StatusCode::CREATED, Json(response)))
 }
 
-// Get entity by ID
+/// Get entity by ID
+#[utoipa::path(
+    get,
+    path = "/api/v1/entities/{id}",
+    params(
+        ("id" = Uuid, Path, description = "Entity ID")
+    ),
+    responses(
+        (status = 200, description = "Entity found", body = EntityResponse),
+        (status = 404, description = "Entity not found"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "entities"
+)]
 pub async fn get_entity(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -110,7 +135,22 @@ pub async fn get_entity(
     Ok(Json(response))
 }
 
-// Update entity
+/// Update entity
+#[utoipa::path(
+    put,
+    path = "/api/v1/entities/{id}",
+    params(
+        ("id" = Uuid, Path, description = "Entity ID")
+    ),
+    request_body = UpdateEntityRequest,
+    responses(
+        (status = 200, description = "Entity updated successfully", body = EntityResponse),
+        (status = 404, description = "Entity not found"),
+        (status = 409, description = "Version conflict"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "entities"
+)]
 pub async fn update_entity(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -189,7 +229,20 @@ pub async fn update_entity(
     Ok(Json(response))
 }
 
-// Delete entity (soft delete)
+/// Delete entity (soft delete)
+#[utoipa::path(
+    delete,
+    path = "/api/v1/entities/{id}",
+    params(
+        ("id" = Uuid, Path, description = "Entity ID")
+    ),
+    responses(
+        (status = 204, description = "Entity deleted successfully"),
+        (status = 404, description = "Entity not found"),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "entities"
+)]
 pub async fn delete_entity(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
@@ -221,7 +274,19 @@ pub async fn delete_entity(
     Ok(StatusCode::NO_CONTENT)
 }
 
-// List entities with filtering
+/// List entities with filtering
+#[utoipa::path(
+    get,
+    path = "/api/v1/entities",
+    params(
+        PaginationParams
+    ),
+    responses(
+        (status = 200, description = "List of entities", body = ListResponse<EntityResponse>),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "entities"
+)]
 pub async fn list_entities(
     State(state): State<Arc<AppState>>,
     Query(mut pagination): Query<PaginationParams>,
@@ -295,7 +360,7 @@ pub async fn list_entities(
 }
 
 // Helper struct for SQL queries
-#[derive(sqlx::FromRow)]
+#[derive(sqlx::FromRow, ToSchema)]
 pub(crate) struct EntityRow {
     pub id: Uuid,
     pub entity_type: String,
