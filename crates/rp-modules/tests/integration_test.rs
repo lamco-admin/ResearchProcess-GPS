@@ -2,7 +2,7 @@
 
 use rp_modules::{
     ModuleLoader, ModuleContext, ModuleCapabilities, ModuleMessage,
-    communication::ModuleChannel,
+    communication::ModuleChannel, module::ModuleType,
 };
 use rp_core::{EntityId, layer3::WorkspaceId};
 use tokio::sync::mpsc;
@@ -33,7 +33,12 @@ async fn test_load_research_log_module() {
     );
     
     // Build module path
-    let module_path = PathBuf::from("modules/research-log");
+    let module_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("modules/research-log");
     
     // Load the module
     let module_id = loader.load_module(&module_path, context).await;
@@ -41,9 +46,14 @@ async fn test_load_research_log_module() {
     // The module should load successfully now
     let module_id = module_id.expect("Failed to load module");
     
-    // Get the module instance
-    let instance = loader.get_instance(&module_id);
-    assert!(instance.is_some());
+    // Verify the module is loaded
+    assert!(loader.is_loaded(&module_id));
+    
+    // Get module info
+    let info = loader.get_module(&module_id);
+    assert!(info.is_some());
+    let info = info.unwrap();
+    assert_eq!(info.metadata.module_type, ModuleType::Native);
     
     // In a complete implementation, we would:
     // 1. Successfully load the module

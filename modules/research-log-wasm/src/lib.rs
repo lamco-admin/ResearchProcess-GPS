@@ -5,14 +5,14 @@
 //! - No async/await (WASM limitations)
 //! - No tokio runtime
 //! - Simplified data structures
-//! - Communication via host functions
+//! - Direct exports for WASI compatibility
 
-// We use std because wasm-bindgen requires it
 use std::collections::HashMap;
+use std::ffi::{CStr, CString};
+use std::os::raw::{c_char, c_int};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use wasm_bindgen::prelude::*;
 
 /// Module state stored globally (WASM is single-threaded)
 static mut MODULE_STATE: Option<ResearchLogState> = None;
@@ -80,25 +80,21 @@ pub enum LogEntryType {
 }
 
 /// Host functions that WASM can call
-#[wasm_bindgen]
 extern "C" {
-    /// Send an event to the host
-    fn host_emit_event(event_type: &str, event_data: &str);
-    
-    /// Log a message to the host
-    fn host_log(level: &str, message: &str);
-    
-    /// Get current timestamp from host
-    fn host_get_timestamp() -> u64;
-    
-    /// Generate UUID from host
-    fn host_generate_uuid() -> String;
+    /// Log a message to the host (for now just print)
+    fn host_log(level: *const c_char, message: *const c_char);
 }
 
 /// Initialize the module
-#[wasm_bindgen]
-pub fn initialize(actor_id: &str) -> String {
+#[no_mangle]
+pub extern "C" fn initialize(actor_id_ptr: *const c_char, actor_id_len: c_int) -> *mut c_char {
     unsafe {
+        let actor_id_slice = std::slice::from_raw_parts(actor_id_ptr as *const u8, actor_id_len as usize);
+        let actor_id = match std::str::from_utf8(actor_id_slice) {
+            Ok(s) => s,
+            Err(_) => return std::ptr::null_mut(),
+        };
+        
         MODULE_STATE = Some(ResearchLogState {
             logs: HashMap::new(),
             active_log: None,
@@ -106,17 +102,24 @@ pub fn initialize(actor_id: &str) -> String {
         });
     }
     
-    host_log("info", "Research Log WASM module initialized");
+    log_message("info", "Research Log WASM module initialized");
     
-    json!({
+    let result = json!({
         "status": "initialized",
         "version": "0.1.0"
-    }).to_string()
+    }).to_string();
+    
+    string_to_ptr(result)
 }
 
 /// Execute a command
-#[wasm_bindgen]
-pub fn execute_command(command: &str, args: &str) -> String {
+#[no_mangle]
+pub extern "C" fn execute_command(
+    command_ptr: *const c_char, 
+    command_len: c_int,
+    args_ptr: *const c_char,
+    args_len: c_int
+) -> *mut c_char {
     let args_value: Value = match serde_json::from_str(args) {
         Ok(v) => v,
         Err(e) => {
