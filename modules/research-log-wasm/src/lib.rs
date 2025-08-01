@@ -8,11 +8,32 @@
 //! - Direct exports for WASI compatibility
 
 use std::collections::HashMap;
-use std::ffi::{CStr, CString};
+use std::ffi::CString;
 use std::os::raw::{c_char, c_int};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+
+/// Convert a Rust string to a C string pointer
+fn string_to_ptr(s: String) -> *mut c_char {
+    match CString::new(s) {
+        Ok(c_str) => c_str.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
+/// Convert a C string pointer and length to a Rust string
+fn ptr_to_string(ptr: *const c_char, len: c_int) -> Result<String, ()> {
+    unsafe {
+        let slice = std::slice::from_raw_parts(ptr as *const u8, len as usize);
+        std::str::from_utf8(slice).map(|s| s.to_string()).map_err(|_| ())
+    }
+}
+
+/// Log a message (since we can't call host functions with strings directly)
+fn log_message(level: &str, msg: &str) {
+    println!("[{}] {}", level, msg);
+}
 
 /// Module state stored globally (WASM is single-threaded)
 static mut MODULE_STATE: Option<ResearchLogState> = None;
@@ -79,10 +100,28 @@ pub enum LogEntryType {
     Progress,
 }
 
-/// Host functions that WASM can call
-extern "C" {
-    /// Log a message to the host (for now just print)
-    fn host_log(level: *const c_char, message: *const c_char);
+/// Simple function to generate UUIDs (simplified for WASM)
+fn host_generate_uuid() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    format!("{:x}", timestamp)
+}
+
+/// Get current timestamp
+fn host_get_timestamp() -> u64 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs()
+}
+
+/// Emit an event (simplified for WASM - just log it)
+fn host_emit_event(event_type: &str, event_data: &str) {
+    log_message("event", &format!("{}: {}", event_type, event_data));
 }
 
 /// Initialize the module
@@ -120,16 +159,37 @@ pub extern "C" fn execute_command(
     args_ptr: *const c_char,
     args_len: c_int
 ) -> *mut c_char {
-    let args_value: Value = match serde_json::from_str(args) {
-        Ok(v) => v,
-        Err(e) => {
-            return json!({
-                "error": format!("Invalid arguments: {}", e)
-            }).to_string();
+    // Convert command string from C
+    let command = match ptr_to_string(command_ptr, command_len) {
+        Ok(s) => s,
+        Err(_) => {
+            return string_to_ptr(json!({
+                "error": "Invalid command string"
+            }).to_string());
         }
     };
     
-    let result = match command {
+    // Convert args string from C
+    let args_str = match ptr_to_string(args_ptr, args_len) {
+        Ok(s) => s,
+        Err(_) => {
+            return string_to_ptr(json!({
+                "error": "Invalid arguments string"
+            }).to_string());
+        }
+    };
+    
+    // Parse args as JSON
+    let args_value: Value = match serde_json::from_str(&args_str) {
+        Ok(v) => v,
+        Err(e) => {
+            return string_to_ptr(json!({
+                "error": format!("Invalid arguments: {}", e)
+            }).to_string());
+        }
+    };
+    
+    let result = match command.as_str() {
         "create_log" => handle_create_log(args_value),
         "add_entry" => handle_add_entry(args_value),
         "analyze_activity" => handle_analyze_activity(args_value),
@@ -140,7 +200,7 @@ pub extern "C" fn execute_command(
         }
     };
     
-    result.to_string()
+    string_to_ptr(result.to_string())
 }
 
 /// Handle create log command
@@ -283,29 +343,55 @@ fn handle_analyze_activity(_args: Value) -> Value {
 }
 
 /// Handle incoming events from the host
-#[wasm_bindgen]
-pub fn handle_event(event_type: &str, event_data: &str) -> String {
-    host_log("debug", &format!("Received event: {} with data: {}", event_type, event_data));
+#[no_mangle]
+pub extern "C" fn handle_event(
+    event_type_ptr: *const c_char,
+    event_type_len: c_int,
+    event_data_ptr: *const c_char,
+    event_data_len: c_int
+) -> *mut c_char {
+    let event_type = match ptr_to_string(event_type_ptr, event_type_len) {
+        Ok(s) => s,
+        Err(_) => return string_to_ptr(json!({"error": "Invalid event type"}).to_string()),
+    };
+    
+    let event_data = match ptr_to_string(event_data_ptr, event_data_len) {
+        Ok(s) => s,
+        Err(_) => return string_to_ptr(json!({"error": "Invalid event data"}).to_string()),
+    };
+    
+    log_message("debug", &format!("Received event: {} with data: {}", event_type, event_data));
     
     // Handle relevant events here
     // For now, just acknowledge
-    json!({
+    string_to_ptr(json!({
         "status": "handled",
         "event_type": event_type
-    }).to_string()
+    }).to_string())
 }
 
 /// Shutdown the module
-#[wasm_bindgen]
-pub fn shutdown() -> String {
-    host_log("info", "Shutting down Research Log WASM module");
+#[no_mangle]
+pub extern "C" fn shutdown() -> *mut c_char {
+    log_message("info", "Shutting down Research Log WASM module");
     
     unsafe {
         MODULE_STATE = None;
     }
     
-    json!({
+    string_to_ptr(json!({
         "status": "shutdown"
-    }).to_string()
+    }).to_string())
+}
+
+/// Free a string allocated by this module
+#[no_mangle]
+pub extern "C" fn free_string(ptr: *mut c_char) {
+    if !ptr.is_null() {
+        unsafe {
+            // Reconstruct the CString and drop it to free memory
+            let _ = CString::from_raw(ptr);
+        }
+    }
 }
 

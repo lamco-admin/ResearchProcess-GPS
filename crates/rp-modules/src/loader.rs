@@ -518,19 +518,35 @@ impl WasmModuleInstance {
             return Err(ModuleError::ExecutionError("Command returned null".to_string()));
         }
         
-        // Read result length (assume it's stored at result_ptr - 4)
-        let mut len_bytes = [0u8; 4];
-        memory.read(&mut *store, (result_ptr - 4) as usize, &mut len_bytes)
-            .map_err(|e| ModuleError::WasmError(format!("Failed to read result length: {}", e)))?;
-        let result_len = i32::from_le_bytes(len_bytes) as usize;
-        
-        // Read result string
-        let mut result_bytes = vec![0u8; result_len];
-        memory.read(&mut *store, result_ptr as usize, &mut result_bytes)
-            .map_err(|e| ModuleError::WasmError(format!("Failed to read result: {}", e)))?;
+        // For C-style strings, we need to find the null terminator
+        let mut result_bytes = Vec::new();
+        let mut offset = 0;
+        loop {
+            let mut byte = [0u8; 1];
+            memory.read(&mut *store, (result_ptr + offset) as usize, &mut byte)
+                .map_err(|e| ModuleError::WasmError(format!("Failed to read result byte: {}", e)))?;
+            
+            if byte[0] == 0 {
+                break;
+            }
+            
+            result_bytes.push(byte[0]);
+            offset += 1;
+            
+            // Safety limit to prevent infinite loops
+            if offset > 1_000_000 {
+                return Err(ModuleError::ExecutionError("Result string too long".to_string()));
+            }
+        }
         
         let result_str = String::from_utf8(result_bytes)
             .map_err(|e| ModuleError::ExecutionError(format!("Invalid UTF-8 in result: {}", e)))?;
+        
+        // Free the result string if the module exports a free_string function
+        if let Ok(free_fn) = instance.get_typed_func::<i32, ()>(&mut *store, "free_string") {
+            // Ignore errors from free_string - it's a best-effort cleanup
+            let _ = free_fn.call_async(&mut *store, result_ptr).await;
+        }
         
         // Parse JSON result
         serde_json::from_str(&result_str)
