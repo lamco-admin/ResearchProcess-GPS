@@ -105,7 +105,7 @@ fn test_research_log_module_ffi() {
     let response_json: serde_json::Value = serde_json::from_str(response_str)
         .expect("Failed to parse response JSON");
     
-    assert_eq!(response_json["status"], "success");
+    assert_eq!(response_json["status"], "created");
     let log_id = response_json["log_id"].as_str().expect("Missing log_id");
     let log_uuid = Uuid::parse_str(log_id).expect("Invalid log UUID");
     

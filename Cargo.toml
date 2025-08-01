@@ -15,6 +15,7 @@ members = [
     "crates/rp-cli", "crates/rp-events",
     "modules/research-log",
     "modules/research-log-wasm", "crates/rp-module-sdk",
+    "modules/example-module",
 ]
 
 # Exclude test modules from workspace to allow independent builds

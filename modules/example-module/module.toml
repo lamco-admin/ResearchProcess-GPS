@@ -1,0 +1,27 @@
+# Example Module Configuration
+
+[module]
+name = "example-module"
+version = "0.1.0"
+description = "Example module demonstrating the message-based FFI architecture"
+author = "ResearchProcess-GPS Team"
+license = "MIT"
+module_type = "native"
+
+[capabilities]
+# What this module can do
+can_query = true
+can_mutate = true
+can_emit_events = true
+can_handle_events = true
+
+[resources]
+# Resource limits (optional)
+max_memory_mb = 128
+max_cpu_percent = 50
+max_file_handles = 10
+max_network_connections = 0
+
+[config]
+# Module-specific configuration
+default_counter_start = 0

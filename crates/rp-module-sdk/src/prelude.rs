@@ -7,6 +7,14 @@ pub use crate::{
     EventHandler, EventRouter, Event,
     LifecycleEvent, ModuleState, ResourceUsage,
     init_logging,
+    // Message builders
+    messages::{
+        MessageType, ResponseStatus, ResponseBuilder,
+        QueryBuilder, MutationBuilder, MutationOperation,
+        parse_message, parse_command,
+    },
+    // FFI utilities
+    ffi::{FfiModule, ModuleHolder, c_str_to_string, string_to_c_str},
 };
 
 pub use serde::{Deserialize, Serialize};
