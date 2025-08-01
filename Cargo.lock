@@ -3090,6 +3090,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "research-log-module"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "rp-core",
+ "rp-events",
+ "rp-modules",
+ "rp-storage",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "ring"
 version = "0.17.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
