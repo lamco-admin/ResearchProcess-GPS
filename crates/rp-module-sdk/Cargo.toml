@@ -17,6 +17,7 @@ chrono = { version = "0.4", features = ["serde"] }
 
 # Module types
 rp-modules = { path = "../rp-modules" }
+rp-events = { path = "../rp-events" }
 
 # Async runtime (optional for native modules)
 tokio = { version = "1", features = ["rt", "sync", "macros"], optional = true }

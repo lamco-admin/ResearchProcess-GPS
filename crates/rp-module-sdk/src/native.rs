@@ -70,24 +70,26 @@ impl NativeModuleBase {
     }
     
     /// Emit an event
-    pub async fn emit_event(&self, event_type: impl Into<String>, data: Value) -> Result<()> {
-        let event = Event {
-            event_type: event_type.into(),
-            data,
-            timestamp: chrono::Utc::now().timestamp() as u64,
-            source: Some(self.info.name.clone()),
-        };
-        
-        self.send_to_host(ModuleMessage::Event { 
-            event: serde_json::to_value(event)
-                .map_err(|e| ModuleError::SerializationError(e))? 
+    pub async fn emit_event(&self, event: rp_events::DomainEvent) -> Result<()> {
+        self.send_to_host(ModuleMessage::EmitEvent { 
+            event 
         }).await
     }
     
     /// Log a message
     pub async fn log(&self, level: log::Level, message: impl Into<String>) -> Result<()> {
-        self.send_to_host(ModuleMessage::LogMessage {
-            level: level.to_string(),
+        use rp_modules::communication::LogLevel;
+        
+        let log_level = match level {
+            log::Level::Trace => LogLevel::Trace,
+            log::Level::Debug => LogLevel::Debug,
+            log::Level::Info => LogLevel::Info,
+            log::Level::Warn => LogLevel::Warn,
+            log::Level::Error => LogLevel::Error,
+        };
+        
+        self.send_to_host(ModuleMessage::Log {
+            level: log_level,
             message: message.into(),
         }).await
     }
@@ -117,6 +119,18 @@ pub trait NativeModule: Module {
     
     /// Called when module is unloaded
     async fn on_unload(&mut self) -> Result<()> {
+        Ok(())
+    }
+    
+    /// Called when configuration is updated
+    async fn on_config_update(&mut self, _config: serde_json::Value) -> Result<()> {
+        // Default implementation: do nothing
+        Ok(())
+    }
+    
+    /// Called when an event is received
+    async fn on_event(&mut self, _event: rp_events::DomainEvent) -> Result<()> {
+        // Default implementation: do nothing
         Ok(())
     }
 }
@@ -151,19 +165,9 @@ impl<M: NativeModule> NativeModuleRunner<M> {
         // Main message loop
         while let Some(message) = self.module_channel.recv().await {
             match message {
-                ModuleMessage::Initialize { actor_id, config } => {
-                    let context = ModuleContext {
-                        instance_id: Uuid::new_v4(),
-                        actor_id,
-                        config,
-                        resource_limits: ResourceLimits::default(),
-                        capabilities: vec![],
-                    };
-                    
-                    self.module.initialize(context).await?;
-                    self.module.base_mut().update_state(|state| {
-                        state.lifecycle = LifecycleEvent::Ready;
-                    });
+                ModuleMessage::ConfigUpdate(config) => {
+                    // Handle config update
+                    self.module.on_config_update(config).await?;
                 }
                 
                 ModuleMessage::CommandRequest { id, command, args } => {
@@ -193,14 +197,11 @@ impl<M: NativeModule> NativeModuleRunner<M> {
                         .map_err(|e| ModuleError::CommunicationError(format!("Failed to send response: {}", e)))?;
                 }
                 
-                ModuleMessage::Event { event } => {
-                    if let Ok(event_obj) = serde_json::from_value::<Event>(event.clone()) {
-                        self.module.base_mut().update_state(|state| {
-                            state.events_received += 1;
-                        });
-                        
-                        let _ = self.module.handle_event(&event_obj.event_type, event_obj.data).await;
-                    }
+                ModuleMessage::Event(event) => {
+                    self.module.base_mut().update_state(|state| {
+                        state.events_received += 1;
+                    });
+                    self.module.on_event(event).await?;
                 }
                 
                 ModuleMessage::Shutdown => {

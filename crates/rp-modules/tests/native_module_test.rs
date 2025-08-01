@@ -2,7 +2,6 @@
 
 use rp_modules::{
     ModuleLoader, ModuleContext, ModuleCapabilities,
-    communication::ModuleMessage,
 };
 use rp_core::{EntityId, layer3::WorkspaceId};
 use serde_json::json;
