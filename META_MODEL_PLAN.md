@@ -24,35 +24,71 @@ Transform ResearchProcess-GPS from a concrete genealogical system to a universal
 - Any research methodology expressible
 - Any workflow system integratable
 
-## Implementation Phases
+## Implementation Approach
 
-### Phase 1: Core Meta-Model (Week 1)
-1. Create new crate structure: `meta-model-core`
-2. Implement fundamental primitives
-3. Build property graph system
-4. Add temporal abstractions
-5. Create basic tests
+### All Layers Together
+We implement all three layers simultaneously as they're interdependent:
+- Layer 1 needs abstraction layers to be useful
+- Layer 2/3 need Layer 1's primitives
+- Abstraction layers tie everything together
 
-### Phase 2: Abstraction Layers (Week 2)
-1. Implement abstraction layer framework
-2. Create GRAMPS XML abstraction
-3. Add calendar systems
-4. Build media handling
-5. Test round-trip preservation
+### Abstraction Layer Storage
 
-### Phase 3: Data Migration (Week 3)
-1. Create migration tools from old model
-2. Build compatibility layer
-3. Implement gradual migration path
-4. Preserve existing data
-5. Validate transformations
+Abstraction layers will be stored as:
 
-### Phase 4: Integration (Week 4)
-1. Update API to support both models
-2. Create query system for meta-model
-3. Build UI abstraction layer
-4. Implement demonstration
-5. Documentation
+1. **Built-in Abstractions** (Compiled into binary)
+   - GRAMPS XML
+   - GEDCOM
+   - Calendar systems (Gregorian, Julian, etc.)
+   - Common naming systems
+
+2. **Plugin Abstractions** (Dynamic loading)
+   - Directory: `~/.researchprocess-gps/abstractions/`
+   - Format: WASM modules or Rust dylibs
+   - Auto-discovered on startup
+
+3. **User Abstractions** (Configuration)
+   - Directory: `~/.researchprocess-gps/user-abstractions/`
+   - Format: JSON/YAML transformation rules
+   - For simple format mappings
+
+4. **Registry Storage**
+   ```
+   abstractions/
+   ├── builtin/              # Compiled abstractions
+   ├── plugins/              # Dynamic abstractions
+   │   ├── familysearch.wasm
+   │   └── ancestry.wasm
+   └── user/                 # User-defined
+       ├── my-format.yaml
+       └── custom-calendar.json
+   ```
+
+### Implementation Tasks
+
+1. **Core Infrastructure**
+   - Create `meta-model-core` crate
+   - Set up all three layers
+   - Build property graph system
+   - Implement abstraction registry
+
+2. **Abstraction Framework**
+   - Define abstraction trait/interface
+   - Create plugin loading system
+   - Build transformation engine
+   - Add validation system
+
+3. **Standard Abstractions**
+   - GRAMPS XML (complete with attributes)
+   - Basic GEDCOM support
+   - Gregorian/Julian calendars
+   - Western naming conventions
+
+4. **Storage Layer**
+   - Entity storage (likely SQLite with JSON)
+   - Relationship indexing
+   - Query optimization
+   - Abstraction caching
 
 ## Key Decisions
 
