@@ -14,7 +14,7 @@ members = [
     "crates/rp-client", 
     "crates/rp-cli", "crates/rp-events",
     "modules/research-log",
-    "modules/research-log-wasm",
+    "modules/research-log-wasm", "crates/rp-module-sdk",
 ]
 
 [workspace.package]
