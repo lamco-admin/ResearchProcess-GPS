@@ -17,6 +17,11 @@ members = [
     "modules/research-log-wasm", "crates/rp-module-sdk",
 ]
 
+# Exclude test modules from workspace to allow independent builds
+exclude = [
+    "modules/test-minimal",
+]
+
 [workspace.package]
 version = "0.1.0"
 authors = ["Greg Lamberson <greg@researchprocess-gps.org>"]

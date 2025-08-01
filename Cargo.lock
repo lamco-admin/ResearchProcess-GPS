@@ -3149,18 +3149,10 @@ dependencies = [
 name = "research-log-module"
 version = "0.1.0"
 dependencies = [
- "anyhow",
- "async-trait",
  "chrono",
- "rp-core",
- "rp-events",
- "rp-modules",
- "rp-storage",
  "serde",
  "serde_json",
- "thiserror 1.0.69",
  "tokio",
- "tracing",
  "uuid",
 ]
 

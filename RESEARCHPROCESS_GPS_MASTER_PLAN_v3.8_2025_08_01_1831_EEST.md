@@ -1,7 +1,7 @@
 # ResearchProcess-GPS Master Implementation Plan
 ## Comprehensive Project Architecture & Roadmap
-### Timestamp: 2025-08-01 17:37:41 EEST  
-### Version: 3.7 - Module System Message-Based FFI Architecture
+### Timestamp: 2025-08-01 18:31:16 EEST  
+### Version: 3.8 - FFI Architecture Implemented & Build Requirements Documented
 
 ---
 
@@ -209,7 +209,7 @@ researchprocess-gps/
 - [x] OpenAPI documentation ✅ COMPLETE
 - [ ] Rate limiting (optional)
 
-### 🚧 Phase 4: Module System (75% Complete) 🔧 REDESIGNING FFI
+### 🚧 Phase 4: Module System (85% Complete) ✅ FFI ARCHITECTURE COMPLETE
 **Goal**: Extensible module framework
 
 **Completed**:
@@ -243,13 +243,19 @@ researchprocess-gps/
 - [x] SDK API alignment with actual rp-modules ✅
 - [x] Execute command mock response removed ✅
 
-**In Progress - Message-Based FFI Architecture**:
-- [ ] Design message protocol specification
-- [ ] Implement native module message handling  
+**Completed - Message-Based FFI Architecture**:
+- [x] Design message protocol specification ✅
+- [x] Implement native module message handling ✅
+- [x] Create minimal FFI test module ✅
+- [x] Update Research Log module to new FFI ✅
+- [x] Validate architecture with comprehensive tests ✅
+
+**Remaining Items**:
 - [ ] Update WASM modules to use unified message format
 - [ ] Create module SDK for message building
 - [ ] Module development documentation
 - [ ] Hot-reload capability
+- [ ] Memory sanitizer testing
 
 ### 🚧 Phase 5-8: Future Development
 Clear roadmap for remaining features
@@ -404,6 +410,20 @@ This is the mark of a healthy project that improves during implementation rather
 ---
 
 ## 🔄 CHANGE LOG
+
+### 2025-08-01 18:31 EEST - Version 3.8
+- **FFI ARCHITECTURE SUCCESSFULLY IMPLEMENTED** ✅
+- **Phase 4 Progress**: Module system 85% complete
+- **Major Accomplishments**:
+  - Implemented minimal FFI test module validating architecture
+  - Completely rewrote Research Log module with message-based FFI
+  - All native module tests passing - NO MORE SEGFAULTS!
+  - Architecture validated and working correctly
+- **Critical Addition**: MANDATORY BUILD REQUIREMENTS section
+  - Documents CARGO_BUILD_JOBS=1 requirement
+  - Specifies timeout requirements
+  - Prevents future compilation confusion
+- **Remaining Work**: WASM alignment, SDK creation, documentation
 
 ### 2025-08-01 17:37 EEST - Version 3.7
 - **MAJOR ARCHITECTURAL DECISION**: Module System FFI Redesign
@@ -766,6 +786,57 @@ The module system implementation now includes:
 - [ ] Example modules using new architecture
 
 **Estimated additional work**: 2-3 days to implement proper FFI architecture
+
+---
+
+## 🚨 CRITICAL BUILD REQUIREMENTS - MANDATORY READING
+
+### Added - 2025-08-01 18:31
+
+**THIS SECTION IS MANDATORY FOR ALL DEVELOPMENT WORK**
+
+### The Problem
+ResearchProcess-GPS has extremely heavy dependencies (Wasmtime, SQLx, crypto libs, etc.) that result in:
+- 200+ crates to compile on first build
+- 5-10 minute clean build times
+- High memory usage during compilation
+- X11 forwarding causing misleading CPU usage indicators
+
+### MANDATORY BUILD PRACTICES
+
+**1. ALWAYS USE SINGLE JOB COMPILATION**
+```bash
+export CARGO_BUILD_JOBS=1  # MANDATORY FOR ALL BUILDS
+```
+
+**2. ALWAYS USE EXTENDED TIMEOUTS**
+```bash
+# For builds: 600000ms (10 minutes)
+# For tests: 300000ms (5 minutes)  
+# For simple operations: 120000ms (2 minutes)
+```
+
+**3. BUILD COMMAND TEMPLATES**
+```bash
+# Building a module
+CARGO_BUILD_JOBS=1 cargo build --release
+
+# Running tests
+CARGO_BUILD_JOBS=1 cargo test --test test_name -- --nocapture
+
+# Compiling tests without running
+CARGO_BUILD_JOBS=1 cargo test --no-run
+```
+
+### What NOT to Do
+- ❌ NEVER run cargo commands without CARGO_BUILD_JOBS=1
+- ❌ NEVER use default timeouts (they're too short)
+- ❌ NEVER panic if Xorg shows high CPU (it's X11 forwarding)
+- ❌ NEVER assume compilation is hung (check with ps aux | grep cargo)
+
+### References
+- [Build Performance Guide](docs/development/BUILD_PERFORMANCE_GUIDE_2025_08_01_1230_EEST.md)
+- [Compilation Incident Report](docs/incidents/COMPILATION_RESOURCE_INCIDENT_2025_08_01_1228_EEST.md)
 
 ---
 
