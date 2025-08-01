@@ -2,6 +2,8 @@
 
 use std::path::Path;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicPtr, Ordering};
+use std::ffi::{c_char, CStr, CString};
 use parking_lot::RwLock;
 use tokio::sync::Mutex;
 use uuid::Uuid;
@@ -12,7 +14,7 @@ use wasmtime_wasi::{WasiCtxBuilder, preview1::WasiP1Ctx};
 use libloading::{Library, Symbol};
 
 use crate::{
-    ModuleMetadata, ModuleManifest, module::{ModuleType, ModuleStatus, ResearchModule},
+    ModuleMetadata, ModuleManifest, module::{ModuleType, ModuleStatus},
     ModuleContext, ResourceLimits, resource_limits::WasmtimeResourceLimiter,
     Result, ModuleError, ModuleMessage
 };
@@ -136,47 +138,24 @@ impl ModuleLoader {
         let instance_arc = instance.clone();
         drop(instances);
         
-        // Try to execute command directly on WASM module
+        // Get mutable access to the instance
         let mut instance_guard = instance_arc.lock().await;
+        
+        // Handle based on module type
         if let Some(wasm_instance) = instance_guard.as_any_mut().downcast_mut::<WasmModuleInstance>() {
-            return wasm_instance.execute_wasm_command(command, args).await;
+            // WASM modules still use the old execute_command for now
+            wasm_instance.execute_wasm_command(command, args).await
+        } else if let Some(native_instance) = instance_guard.as_any_mut().downcast_mut::<NativeModuleInstance>() {
+            // Native modules use the message-based approach
+            let command_message = serde_json::json!({
+                "name": command,
+                "args": args
+            });
+            
+            native_instance.send_message("command", command_message).await
+        } else {
+            Err(ModuleError::ExecutionError("Unknown module type".to_string()))
         }
-        drop(instance_guard);
-        
-        // For native modules, use the channel approach
-        // Create a unique request ID
-        let request_id = Uuid::new_v4();
-        
-        // Send command request to module
-        let message = ModuleMessage::CommandRequest { 
-            id: request_id,
-            command: command.to_string(), 
-            args 
-        };
-        
-        // Get the instance again to send the message
-        let instances = self.instances.read();
-        let instance = instances.iter()
-            .find(|inst| {
-                inst.try_lock().map(|i| i.id() == *id).unwrap_or(false)
-            })
-            .ok_or_else(|| ModuleError::NotFound(id.to_string()))?;
-        
-        let instance_guard = instance.try_lock()
-            .map_err(|_| ModuleError::CommunicationError("Module is locked".to_string()))?;
-        
-        // Send message to module through its channel
-        instance_guard.context().host_channel.send(message).await
-            .map_err(|e| ModuleError::CommunicationError(format!("Failed to send command: {}", e)))?;
-        drop(instance_guard);
-        drop(instances);
-        
-        // For now, return a placeholder response since we don't have a response channel yet
-        // TODO: Implement proper command response handling
-        Ok(serde_json::json!({
-            "status": "sent",
-            "request_id": request_id
-        }))
     }
     
     /// Load a module from path
@@ -261,7 +240,10 @@ impl ModuleLoader {
             manifest,
             library: Arc::new(library),
             context,
-            module: None,
+            module_ptr: None,
+            handle_message_fn: None,
+            destroy_module_fn: None,
+            free_string_fn: None,
         }))
     }
     
@@ -386,6 +368,17 @@ struct WasmModuleInstance {
 }
 
 /// Native module instance
+/// FFI function types for native modules
+type CreateModuleFn = unsafe extern "C" fn() -> *mut std::ffi::c_void;
+type DestroyModuleFn = unsafe extern "C" fn(*mut std::ffi::c_void);
+type HandleMessageFn = unsafe extern "C" fn(
+    module: *mut std::ffi::c_void,
+    message_type: *const c_char,
+    payload: *const c_char,
+) -> *mut c_char;
+type FreeStringFn = unsafe extern "C" fn(*mut c_char);
+type GetModuleMetadataFn = unsafe extern "C" fn() -> *mut c_char;
+
 struct NativeModuleInstance {
     id: Uuid,
     metadata: ModuleMetadata,
@@ -393,7 +386,64 @@ struct NativeModuleInstance {
     manifest: ModuleManifest,
     library: Arc<Library>,
     context: ModuleContext,
-    module: Option<Box<dyn ResearchModule>>,
+    module_ptr: Option<std::sync::atomic::AtomicPtr<std::ffi::c_void>>,
+    handle_message_fn: Option<Symbol<'static, HandleMessageFn>>,
+    destroy_module_fn: Option<Symbol<'static, DestroyModuleFn>>,
+    free_string_fn: Option<Symbol<'static, FreeStringFn>>,
+}
+
+impl NativeModuleInstance {
+    /// Send a message to the module and get the response
+    async fn send_message(&self, message_type: &str, payload: serde_json::Value) -> Result<serde_json::Value> {
+        let module_ptr = self.module_ptr
+            .as_ref()
+            .ok_or_else(|| ModuleError::ExecutionError("Module not initialized".to_string()))?
+            .load(Ordering::Acquire);
+        
+        if module_ptr.is_null() {
+            return Err(ModuleError::ExecutionError("Module pointer is null".to_string()));
+        }
+        
+        let handle_message = self.handle_message_fn
+            .as_ref()
+            .ok_or_else(|| ModuleError::ExecutionError("handle_message function not loaded".to_string()))?;
+        
+        // Convert message type and payload to C strings
+        let message_type_cstr = CString::new(message_type)
+            .map_err(|e| ModuleError::ExecutionError(format!("Invalid message type: {}", e)))?;
+        let payload_str = payload.to_string();
+        let payload_cstr = CString::new(payload_str)
+            .map_err(|e| ModuleError::ExecutionError(format!("Invalid payload: {}", e)))?;
+        
+        // Call the FFI function
+        let result_ptr = unsafe {
+            handle_message(
+                module_ptr,
+                message_type_cstr.as_ptr(),
+                payload_cstr.as_ptr(),
+            )
+        };
+        
+        if result_ptr.is_null() {
+            return Err(ModuleError::ExecutionError("Module returned null response".to_string()));
+        }
+        
+        // Convert the result back to a Rust string
+        let result_str = unsafe {
+            let result = CStr::from_ptr(result_ptr).to_string_lossy().to_string();
+            
+            // Free the result string if we have a free function
+            if let Some(free_fn) = &self.free_string_fn {
+                free_fn(result_ptr);
+            }
+            
+            result
+        };
+        
+        // Parse the JSON response
+        serde_json::from_str(&result_str)
+            .map_err(|e| ModuleError::ExecutionError(format!("Invalid response JSON: {}", e)))
+    }
 }
 
 #[async_trait::async_trait]
@@ -629,39 +679,57 @@ impl ModuleInstance for NativeModuleInstance {
     }
     
     async fn initialize(&mut self) -> Result<()> {
-        // Native modules export a create function that returns a Box<dyn ResearchModule>
-        // We use a raw pointer for FFI compatibility
-        type ModuleCreateFn = unsafe extern "C" fn() -> *mut std::ffi::c_void;
-        
-        let create_fn: Symbol<ModuleCreateFn> = unsafe {
-            self.library.get(b"_create_module\0")
+        // Load FFI functions
+        unsafe {
+            // Load create_module function
+            let create_fn: Symbol<CreateModuleFn> = self.library.get(b"create_module\0")
+                .or_else(|_| self.library.get(b"_create_module\0"))
                 .map_err(|e| ModuleError::LoadError(
-                    format!("Failed to find _create_module function: {}", e)
-                ))?
-        };
-        
-        // Create the module instance
-        let module_ptr = unsafe { create_fn() };
-        if module_ptr.is_null() {
-            return Err(ModuleError::LoadError(
-                "Module creation function returned null".to_string()
+                    format!("Failed to find create_module function: {}", e)
+                ))?;
+            
+            // Create the module instance
+            let module_ptr = create_fn();
+            if module_ptr.is_null() {
+                return Err(ModuleError::LoadError(
+                    "Module creation function returned null".to_string()
+                ));
+            }
+            self.module_ptr = Some(AtomicPtr::new(module_ptr));
+            
+            // Load handle_message function
+            self.handle_message_fn = Some(std::mem::transmute(
+                self.library.get::<HandleMessageFn>(b"handle_message\0")
+                    .or_else(|_| self.library.get(b"_handle_message\0"))
+                    .map_err(|e| ModuleError::LoadError(
+                        format!("Failed to find handle_message function: {}", e)
+                    ))?
             ));
+            
+            // Load destroy_module function
+            self.destroy_module_fn = Some(std::mem::transmute(
+                self.library.get::<DestroyModuleFn>(b"destroy_module\0")
+                    .or_else(|_| self.library.get(b"_destroy_module\0"))
+                    .map_err(|e| ModuleError::LoadError(
+                        format!("Failed to find destroy_module function: {}", e)
+                    ))?
+            ));
+            
+            // Load free_string function (optional)
+            self.free_string_fn = self.library.get::<FreeStringFn>(b"free_string\0")
+                .or_else(|_| self.library.get(b"_free_string\0"))
+                .ok()
+                .map(|s| std::mem::transmute(s));
         }
         
-        // The module returns a Box<dyn ResearchModule> as a raw pointer
-        // We need to cast it back from c_void
-        let mut module = unsafe {
-            // Cast the c_void pointer to a raw pointer to Box<dyn ResearchModule>
-            let boxed_trait = module_ptr as *mut Box<dyn ResearchModule>;
-            // Dereference to get the Box<dyn ResearchModule>
-            *Box::from_raw(boxed_trait)
-        };
+        // Send init message
+        let init_payload = serde_json::json!({
+            "instance_id": self.context.instance_id,
+            "workspace_id": self.context.workspace_id,
+            "actor_id": self.context.actor_id,
+        });
         
-        // Initialize the module with context
-        module.initialize(self.context.clone()).await
-            .map_err(|e| ModuleError::InitializationError(e.to_string()))?;
-        
-        self.module = Some(module);
+        self.send_message("init", init_payload).await?;
         Ok(())
     }
     
@@ -672,9 +740,19 @@ impl ModuleInstance for NativeModuleInstance {
     }
     
     async fn shutdown(&mut self) -> Result<()> {
-        if let Some(mut module) = self.module.take() {
-            module.shutdown().await
-                .map_err(|e| ModuleError::ShutdownError(e.to_string()))?;
+        if let Some(atomic_ptr) = self.module_ptr.take() {
+            let module_ptr = atomic_ptr.load(Ordering::Acquire);
+            if !module_ptr.is_null() {
+                // Send shutdown message
+                let _ = self.send_message("shutdown", serde_json::json!({})).await;
+                
+                // Call destroy_module to clean up
+                if let Some(destroy_fn) = &self.destroy_module_fn {
+                    unsafe {
+                        destroy_fn(module_ptr);
+                    }
+                }
+            }
         }
         Ok(())
     }

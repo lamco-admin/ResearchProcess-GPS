@@ -93,7 +93,8 @@ async fn test_load_wasm_module() {
     assert!(command_result.is_ok(), "Command execution failed: {:?}", command_result.err());
     
     let response = command_result.unwrap();
-    assert!(response.get("log_id").is_some());
+    println!("Response from WASM module: {:?}", response);
+    assert!(response.get("log_id").is_some(), "Response missing log_id: {:?}", response);
     assert_eq!(response.get("status"), Some(&serde_json::json!("created")));
     
     // Test receiving events from module
