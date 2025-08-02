@@ -4,10 +4,9 @@ use axum::{
     http::StatusCode,
     response::Json,
 };
-use rp_core::layer3::EntityType;
 use rp_protocol::{
-    CreateEntityRequest, EntityResponse, ListResponse, PaginationParams, UpdateEntityRequest,
-    EntityMetadata,
+    CreateEntityRequest, EntityResponse, ListResponse, UpdateEntityRequest,
+    EntityMetadata, PaginationParams,
 };
 use rp_storage::{StorageBackend, Transaction, StorageEntity};
 use rp_storage_postgres::EventSourcedTransaction;
@@ -33,13 +32,10 @@ pub async fn create_entity(
     State(state): State<Arc<AppState>>,
     Json(request): Json<CreateEntityRequest>,
 ) -> ApiResult<(StatusCode, Json<EntityResponse>)> {
-    // Convert EntityType to string representation
-    let entity_type_str = entity_type_to_string(&request.entity_type);
-    
     // Create entity struct
     let entity = StorageEntity {
         id: Uuid::now_v7(),
-        entity_type: entity_type_str,
+        entity_type: request.entity_type.clone(),
         data: request.data,
         binary_data: None,
         created_by: Uuid::nil(), // TODO: Get from auth context
@@ -114,12 +110,9 @@ pub async fn get_entity(
         .map_err(ApiError::Storage)?
         .ok_or(ApiError::NotFound)?;
     
-    // Convert entity_type string to enum
-    let entity_type = string_to_entity_type(&entity.entity_type)?;
-
     let response = EntityResponse {
         id: entity.id,
-        entity_type,
+        entity_type: entity.entity_type,
         version: entity.version as i64,
         data: entity.data,
         metadata: EntityMetadata {
@@ -208,12 +201,9 @@ pub async fn update_entity(
         .map_err(ApiError::Storage)?
         .ok_or(ApiError::NotFound)?;
     
-    // Convert entity_type string to enum
-    let entity_type = string_to_entity_type(&updated.entity_type)?;
-
     let response = EntityResponse {
         id: updated.id,
-        entity_type,
+        entity_type: updated.entity_type,
         version: updated.version as i64,
         data: updated.data,
         metadata: EntityMetadata {
@@ -331,10 +321,9 @@ pub async fn list_entities(
     let items: Vec<EntityResponse> = entities
         .into_iter()
         .map(|entity| {
-            let entity_type = string_to_entity_type(&entity.entity_type)?;
             Ok(EntityResponse {
                 id: entity.id,
-                entity_type,
+                entity_type: entity.entity_type,
                 version: entity.version,
                 data: entity.data,
                 metadata: EntityMetadata {
@@ -371,13 +360,4 @@ pub(crate) struct EntityRow {
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
     pub version: i64,
-}
-
-// Helper functions to convert between EntityType and String
-fn entity_type_to_string(entity_type: &EntityType) -> String {
-    crate::entity_type_mapper::entity_type_to_string(entity_type).to_string()
-}
-
-fn string_to_entity_type(s: &str) -> Result<EntityType, ApiError> {
-    crate::entity_type_mapper::parse_entity_type(s)
 }

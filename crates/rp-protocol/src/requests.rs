@@ -1,7 +1,6 @@
 //! Request message definitions for the ResearchProcess-GPS protocol
 
 use chrono::{DateTime, Utc};
-use rp_core::layer3::{EntityType, ModuleConfig};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
@@ -11,7 +10,7 @@ use utoipa::ToSchema;
 /// Generic entity request wrapper for CRUD operations
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct EntityRequest<T> {
-    pub entity_type: EntityType,
+    pub entity_type: String,
     pub data: T,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub workspace_id: Option<Uuid>,
@@ -20,7 +19,7 @@ pub struct EntityRequest<T> {
 /// Create entity request
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct CreateEntityRequest {
-    pub entity_type: EntityType,
+    pub entity_type: String,
     pub data: JsonValue,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub workspace_id: Option<Uuid>,
@@ -29,7 +28,7 @@ pub struct CreateEntityRequest {
 /// Update entity request
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct UpdateEntityRequest {
-    pub entity_type: EntityType,
+    pub entity_type: String,
     pub data: JsonValue,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<i64>, // For optimistic concurrency control
@@ -39,7 +38,7 @@ pub struct UpdateEntityRequest {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct QueryRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub entity_types: Option<Vec<EntityType>>,
+    pub entity_types: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub workspace_id: Option<Uuid>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -66,7 +65,7 @@ pub struct SearchRequest {
 #[derive(Debug, Clone, Serialize, Deserialize, Default, ToSchema)]
 pub struct SearchFilters {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub entity_types: Option<Vec<EntityType>>,
+    pub entity_types: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub workspace_id: Option<Uuid>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -131,7 +130,7 @@ pub struct BulkOperationRequest {
 #[serde(tag = "action", rename_all = "lowercase")]
 pub enum BulkOperation {
     Create {
-        entity_type: EntityType,
+        entity_type: String,
         data: JsonValue,
         #[serde(skip_serializing_if = "Option::is_none")]
         client_id: Option<String>, // Client-provided ID for correlation
@@ -243,7 +242,7 @@ pub struct SubscriptionParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub entity_id: Option<Uuid>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub entity_type: Option<EntityType>,
+    pub entity_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub workspace_id: Option<Uuid>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -254,7 +253,7 @@ pub struct SubscriptionParams {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct LoadModuleRequest {
     pub name: String,
-    pub config: ModuleConfig,
+    pub config: serde_json::Value,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]

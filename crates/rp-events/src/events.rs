@@ -66,8 +66,8 @@ pub enum TheoryEvent {
         details: Option<String>,
     },
     StateChanged {
-        from_state: TheoryState,
-        to_state: TheoryState,
+        from_state: String,
+        to_state: String,
         reason: String,
     },
     ComplianceConfigured {
@@ -75,7 +75,7 @@ pub enum TheoryEvent {
         config: serde_json::Value,
     },
     WorkProductAdded {
-        product_type: WorkProductType,
+        product_type: String,
         product_id: Uuid,
     },
     ContributorAdded {
@@ -99,13 +99,13 @@ pub enum IdentityPersonaEvent {
         details: serde_json::Value,
     },
     StateChanged {
-        from_state: IdentityState,
-        to_state: IdentityState,
+        from_state: String,
+        to_state: String,
         reason: String,
     },
     EvidenceAdded {
         evidence_id: Uuid,
-        evidence_type: EvidenceType,
+        evidence_type: String,
     },
     PromotedToPerson {
         person_id: Uuid,
@@ -152,7 +152,7 @@ pub enum PersonEvent {
 #[serde(tag = "event_type")]
 pub enum SourceEvent {
     Created {
-        source_type: SourceType,
+        source_type: String,
         title: String,
         researcher_id: Uuid,
     },
@@ -190,8 +190,8 @@ pub enum EvidenceEvent {
         details: serde_json::Value,
     },
     TypeChanged {
-        from_type: EvidenceType,
-        to_type: EvidenceType,
+        from_type: String,
+        to_type: String,
         reason: String,
     },
     Verified {
@@ -221,8 +221,8 @@ pub enum CitationEvent {
         details: serde_json::Value,
     },
     StateChanged {
-        from_state: CitationState,
-        to_state: CitationState,
+        from_state: String,
+        to_state: String,
     },
     ElementAdded {
         element_name: String,
@@ -241,7 +241,7 @@ pub enum CitationEvent {
 #[serde(tag = "event_type")]
 pub enum ConfidenceEvent {
     Assessed {
-        level: ConfidenceLevel,
+        level: f64,
         methodology: String,
         analysis: String,
         assessor_id: Uuid,
@@ -435,12 +435,12 @@ pub enum ResearchLogEvent {
 #[serde(tag = "event_type")]
 pub enum ResearchSessionEvent {
     Started {
-        session_type: SessionType,
+        session_type: String,
         researcher_id: Uuid,
     },
     ActivityRecorded {
         activity_id: Uuid,
-        activity_type: ActivityType,
+        activity_type: String,
     },
     DataCaptured {
         capture_source: String,
@@ -461,7 +461,7 @@ pub enum ResearchSessionEvent {
 #[serde(tag = "event_type")]
 pub enum ResearchActivityEvent {
     Created {
-        activity_type: ActivityType,
+        activity_type: String,
         target_entity: Option<Uuid>,
     },
     ParametersSet {
@@ -481,7 +481,7 @@ pub enum ResearchActivityEvent {
 #[serde(tag = "event_type")]
 pub enum WorkProductEvent {
     Created {
-        product_type: WorkProductType,
+        product_type: String,
         template_id: String,
         creator_id: Uuid,
     },

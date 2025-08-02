@@ -3,7 +3,8 @@
 use uuid::Uuid;
 use tokio::sync::mpsc;
 
-use rp_core::{EntityId, layer3::WorkspaceId};
+use meta_model_core::layer1::EntityId;
+use meta_model_core::layer3::WorkspaceId;
 use crate::{ModuleCapabilities, ModuleMessage};
 
 /// Context provided to modules for execution

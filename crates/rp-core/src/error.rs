@@ -2,7 +2,7 @@
 
 use thiserror::Error;
 
-use crate::EntityId;
+use meta_model_core::layer1::EntityId;
 
 /// Core error type for ResearchProcess-GPS
 #[derive(Error, Debug)]
