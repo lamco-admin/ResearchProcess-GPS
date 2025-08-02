@@ -80,7 +80,6 @@ use utoipa_swagger_ui::SwaggerUi;
             rp_server::handlers::SearchResult,
             rp_server::handlers::SearchFacets,
             // Core types
-            rp_core::layer3::EntityType,
         )
     ),
     tags(

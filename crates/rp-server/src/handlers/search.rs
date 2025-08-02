@@ -204,10 +204,9 @@ pub async fn search_entities(
     let search_results: Vec<SearchResult> = results
         .into_iter()
         .map(|row| {
-            let entity_type = crate::entity_type_mapper::parse_entity_type(&row.entity_type)?;
             let entity = EntityResponse {
                 id: row.id,
-                entity_type,
+                entity_type: row.entity_type.clone(),
                 version: row.version,
                 data: row.data.clone(),
                 metadata: EntityMetadata {

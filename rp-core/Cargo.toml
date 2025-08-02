@@ -1,0 +1,8 @@
+[package]
+name = "rp-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+meta-model-core = { path = "../meta-model-core" }
+serde = { version = "1.0", features = ["derive"] }

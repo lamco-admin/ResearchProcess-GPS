@@ -4,7 +4,6 @@ use axum::{
     http::StatusCode,
     response::Json,
 };
-use rp_core::layer3::EntityType;
 use rp_protocol::{EntityResponse, ListResponse};
 use rp_storage::{StorageBackend, Transaction};
 use serde::{Deserialize, Serialize};
@@ -193,7 +192,7 @@ pub async fn get_theory_evidence(
         .into_iter()
         .map(|entity| EntityResponse {
             id: entity.id,
-            entity_type: EntityType::Evidence,
+            entity_type: "Evidence".to_string(),
             version: entity.version,
             data: entity.data,
             metadata: rp_protocol::EntityMetadata {

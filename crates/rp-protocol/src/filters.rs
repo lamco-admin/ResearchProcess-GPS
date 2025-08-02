@@ -1,7 +1,6 @@
 //! Filter definitions for queries and searches
 
 use chrono::{DateTime, Utc};
-use rp_core::layer3::EntityType;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
@@ -37,12 +36,8 @@ impl FilterBuilder {
         self
     }
     
-    pub fn entity_type(self, entity_type: EntityType) -> Self {
-        // Serialize EntityType as JSON value
-        // EntityType is a simple enum, serialization should never fail
-        let json_value = serde_json::to_value(&entity_type)
-            .expect("EntityType serialization should never fail");
-        self.with("entity_type", FilterValue::Json(json_value))
+    pub fn entity_type(self, entity_type: String) -> Self {
+        self.with("entity_type", FilterValue::String(entity_type))
     }
     
     pub fn workspace_id(self, workspace_id: Uuid) -> Self {

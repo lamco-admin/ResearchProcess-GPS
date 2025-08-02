@@ -2,7 +2,6 @@
 
 use crate::{SubscriptionRequest, EntityResponse, ErrorDetail};
 use chrono::{DateTime, Utc};
-use rp_core::layer3::EntityType;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use uuid::Uuid;
@@ -103,7 +102,7 @@ pub enum ServerMessagePayload {
 pub struct EventNotification {
     pub event_id: Uuid,
     pub event_type: EventType,
-    pub entity_type: EntityType,
+    pub entity_type: String,
     pub entity_id: Uuid,
     pub version: i64,
     #[serde(skip_serializing_if = "Option::is_none")]

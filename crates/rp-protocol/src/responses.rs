@@ -1,7 +1,6 @@
 //! Response message definitions for the ResearchProcess-GPS protocol
 
 use chrono::{DateTime, Utc};
-use rp_core::layer3::EntityType;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
@@ -12,7 +11,7 @@ use utoipa::ToSchema;
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct EntityResponse {
     pub id: Uuid,
-    pub entity_type: EntityType,
+    pub entity_type: String,
     pub version: i64,
     pub data: JsonValue,
     pub metadata: EntityMetadata,
