@@ -3304,6 +3304,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "rp-meta-core"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "indexmap 2.10.0",
+ "proptest",
+ "quickcheck",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "rp-module-sdk"
 version = "0.1.0"
 dependencies = [
