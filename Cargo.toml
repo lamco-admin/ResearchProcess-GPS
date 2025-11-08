@@ -2,7 +2,8 @@
 resolver = "2"
 members = [
     "crates/rp-core",
-    "crates/rp-protocol", 
+    "crates/rp-meta-core",  # NEW: Universal meta-model primitives
+    "crates/rp-protocol",
     "crates/rp-engine",
     "crates/rp-storage",
     "crates/rp-storage-postgres",
@@ -11,7 +12,7 @@ members = [
     "crates/rp-network",
     "crates/rp-modules",
     "crates/rp-server",
-    "crates/rp-client", 
+    "crates/rp-client",
     "crates/rp-cli", "crates/rp-events",
     "modules/research-log",
     "modules/research-log-wasm", "crates/rp-module-sdk",

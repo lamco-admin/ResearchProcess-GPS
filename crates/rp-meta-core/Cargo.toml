@@ -1,0 +1,30 @@
+[package]
+name = "rp-meta-core"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Universal meta-model core for ResearchProcess-GPS"
+
+[dependencies]
+# Core dependencies
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+uuid = { workspace = true, features = ["v4"] }  # Enable v4 UUID generation
+chrono.workspace = true
+
+# Async
+async-trait.workspace = true
+tokio = { workspace = true, features = ["sync"] }
+
+# Tracing
+tracing.workspace = true
+
+# Additional dependencies for meta-model
+indexmap = { version = "2.5", features = ["serde"] }  # Ordered HashMap with serde support
+
+[dev-dependencies]
+proptest.workspace = true
+quickcheck.workspace = true
+tokio = { workspace = true, features = ["test-util", "macros"] }
