@@ -1,0 +1,644 @@
+# GEDCOM 7.0 Schema
+# Based on the GEDCOM 7.0 specification
+# https://gedcom.io/specifications/FamilySearchGEDCOMv7.html
+
+schema:
+  id: gedcom-7
+  version: "7.0.0"
+  name: GEDCOM 7.0
+  description: Complete GEDCOM 7.0 specification schema
+
+entity_types:
+  Individual:
+    description: A person
+    required_properties:
+      - name
+    optional_properties:
+      - sex
+      - birth_date
+      - birth_place
+      - christening_date
+      - christening_place
+      - death_date
+      - death_place
+      - burial_date
+      - burial_place
+      - occupation
+      - education
+      - religion
+      - caste
+      - national_id
+      - nationality
+      - nobility_title
+      - physical_description
+      - notes
+      - media_references
+      - source_citations
+      - uid
+    properties:
+      name:
+        type: Text
+        description: Name of the individual (personal name)
+        validation:
+          - rule: Required
+      sex:
+        type: Enum
+        values: [M, F, X, U]
+        description: |
+          Sex assigned at birth:
+          M=Male, F=Female, X=Non-binary, U=Unknown
+      birth_date:
+        type: Temporal
+        description: Date of birth
+      birth_place:
+        type: Spatial
+        description: Place of birth
+      christening_date:
+        type: Temporal
+        description: Date of christening (LDS baptism)
+      christening_place:
+        type: Spatial
+        description: Place of christening
+      death_date:
+        type: Temporal
+        description: Date of death
+      death_place:
+        type: Spatial
+        description: Place of death
+      burial_date:
+        type: Temporal
+        description: Date of burial
+      burial_place:
+        type: Spatial
+        description: Place of burial
+      occupation:
+        type: Text
+        description: Occupation or profession
+      education:
+        type: Text
+        description: Educational achievement
+      religion:
+        type: Text
+        description: Religious affiliation
+      caste:
+        type: Text
+        description: Caste name (used in some cultures)
+      national_id:
+        type: Text
+        description: National identification number
+      nationality:
+        type: Text
+        description: National heritage
+      nobility_title:
+        type: Text
+        description: Nobility title
+      physical_description:
+        type: Text
+        description: Physical description
+      notes:
+        type: Text
+        description: Additional notes
+      media_references:
+        type: Collection
+        item_type: Reference
+        description: References to media objects
+      source_citations:
+        type: Collection
+        item_type: Reference
+        description: Source citations
+      uid:
+        type: Text
+        description: Permanent identifier (UUID)
+    valid_states:
+      - Draft
+      - Research
+      - Verified
+      - Published
+      - Living
+      - Deceased
+    default_state: Draft
+
+  Family:
+    description: A family unit
+    optional_properties:
+      - marriage_date
+      - marriage_place
+      - marriage_type
+      - divorce_date
+      - divorce_place
+      - annulment_date
+      - engagement_date
+      - engagement_place
+      - number_of_children
+      - notes
+      - media_references
+      - source_citations
+      - uid
+    properties:
+      marriage_date:
+        type: Temporal
+        description: Date of marriage
+      marriage_place:
+        type: Spatial
+        description: Place of marriage
+      marriage_type:
+        type: Enum
+        values: [Civil, Religious, Common Law, Unknown]
+        description: Type of marriage
+      divorce_date:
+        type: Temporal
+        description: Date of divorce
+      divorce_place:
+        type: Spatial
+        description: Place of divorce
+      annulment_date:
+        type: Temporal
+        description: Date of annulment
+      engagement_date:
+        type: Temporal
+        description: Date of engagement
+      engagement_place:
+        type: Spatial
+        description: Place of engagement
+      number_of_children:
+        type: Integer
+        min: 0
+        description: Known number of children
+      notes:
+        type: Text
+        description: Family notes
+      media_references:
+        type: Collection
+        item_type: Reference
+      source_citations:
+        type: Collection
+        item_type: Reference
+      uid:
+        type: Text
+        description: Permanent identifier
+    valid_states:
+      - Draft
+      - Verified
+    default_state: Draft
+
+  Source:
+    description: A source of information
+    required_properties:
+      - title
+    optional_properties:
+      - abbreviation
+      - author
+      - publication_facts
+      - text_from_source
+      - repository_citation
+      - notes
+      - media_references
+      - uid
+    properties:
+      title:
+        type: Text
+        description: Title of the source
+        validation:
+          - rule: Required
+      abbreviation:
+        type: Text
+        description: Short title used for citation
+      author:
+        type: Text
+        description: Author or creator
+      publication_facts:
+        type: Text
+        description: When and where the work was published
+      text_from_source:
+        type: Text
+        description: Actual text transcribed from source
+      repository_citation:
+        type: Reference
+        description: Reference to repository
+      notes:
+        type: Text
+        description: Source notes
+      media_references:
+        type: Collection
+        item_type: Reference
+      uid:
+        type: Text
+        description: Permanent identifier
+    valid_states:
+      - Unverified
+      - Verified
+      - Primary
+      - Secondary
+      - Questionable
+    default_state: Unverified
+
+  Repository:
+    description: An institution or person that has a collection of sources
+    required_properties:
+      - name
+    optional_properties:
+      - address
+      - phone
+      - email
+      - fax
+      - website
+      - notes
+      - uid
+    properties:
+      name:
+        type: Text
+        description: Official name of the repository
+        validation:
+          - rule: Required
+      address:
+        type: Spatial
+        description: Mailing address
+      phone:
+        type: Text
+        pattern: "^[+]?[0-9\\s\\-()]+$"
+        description: Phone number
+      email:
+        type: Text
+        pattern: "^[^@]+@[^@]+\\.[^@]+$"
+        description: Email address
+      fax:
+        type: Text
+        pattern: "^[+]?[0-9\\s\\-()]+$"
+        description: Fax number
+      website:
+        type: Text
+        description: Website URL
+      notes:
+        type: Text
+      uid:
+        type: Text
+    valid_states:
+      - Active
+      - Inactive
+    default_state: Active
+
+  SharedNote:
+    description: A note that can be referenced by multiple entities
+    required_properties:
+      - text
+    optional_properties:
+      - mime_type
+      - language
+      - translation
+      - source_citations
+      - uid
+    properties:
+      text:
+        type: Text
+        description: The text of the note
+        validation:
+          - rule: Required
+      mime_type:
+        type: Text
+        description: Media type (text/plain, text/html)
+        default: "text/plain"
+      language:
+        type: Text
+        description: Language code (BCP 47)
+      translation:
+        type: Collection
+        item_type: Map
+        description: Translations in other languages
+      source_citations:
+        type: Collection
+        item_type: Reference
+      uid:
+        type: Text
+    valid_states:
+      - Draft
+      - Published
+    default_state: Draft
+
+  Multimedia:
+    description: Digital or analog media object
+    required_properties:
+      - file_reference
+    optional_properties:
+      - title
+      - format
+      - media_type
+      - width
+      - height
+      - duration
+      - notes
+      - source_citations
+      - uid
+    properties:
+      file_reference:
+        type: Text
+        description: Path or URL to media file
+        validation:
+          - rule: Required
+      title:
+        type: Text
+        description: Descriptive title
+      format:
+        type: Text
+        description: File format (JPEG, PNG, PDF, etc.)
+      media_type:
+        type: Enum
+        values: [Audio, Book, Card, Electronic, Fiche, Film, Magazine, Manuscript, Map, Newspaper, Photo, Tombstone, Video, Other]
+        description: Type of media
+      width:
+        type: Integer
+        min: 1
+        description: Image width in pixels
+      height:
+        type: Integer
+        min: 1
+        description: Image height in pixels
+      duration:
+        type: Integer
+        min: 1
+        description: Duration in seconds (for audio/video)
+      notes:
+        type: Text
+      source_citations:
+        type: Collection
+        item_type: Reference
+      uid:
+        type: Text
+    valid_states:
+      - Draft
+      - Verified
+      - Published
+    default_state: Draft
+
+  Submitter:
+    description: Person who submitted the genealogical data
+    required_properties:
+      - name
+    optional_properties:
+      - address
+      - phone
+      - email
+      - fax
+      - website
+      - language
+      - uid
+    properties:
+      name:
+        type: Text
+        description: Name of submitter
+        validation:
+          - rule: Required
+      address:
+        type: Spatial
+      phone:
+        type: Text
+      email:
+        type: Text
+        pattern: "^[^@]+@[^@]+\\.[^@]+$"
+      fax:
+        type: Text
+      website:
+        type: Text
+      language:
+        type: Text
+        description: Language preference (BCP 47)
+      uid:
+        type: Text
+    valid_states:
+      - Active
+      - Inactive
+    default_state: Active
+
+relationship_types:
+  Parent-Child:
+    description: Biological or adoptive parent-child relationship
+    participants:
+      - role: parent
+        entity_types: [Individual]
+        required: true
+        multiple: true
+      - role: child
+        entity_types: [Individual]
+        required: true
+        multiple: false
+    optional_properties:
+      - relationship_type
+      - pedigree
+      - adoption_date
+      - adoption_place
+      - status
+    properties:
+      relationship_type:
+        type: Enum
+        values: [Birth, Adopted, Foster, Sealing, Unknown]
+        description: Type of parent-child relationship
+        default: Birth
+      pedigree:
+        type: Enum
+        values: [Birth, Adopted, Foster]
+        description: Pedigree linkage type
+      adoption_date:
+        type: Temporal
+        description: Date of adoption
+      adoption_place:
+        type: Spatial
+        description: Place of adoption
+      status:
+        type: Enum
+        values: [Proven, Disproven, Challenged]
+        description: Status of the relationship assertion
+    min_participants: 2
+    max_participants: 3
+
+  Spouse:
+    description: Marriage or partnership relationship
+    participants:
+      - role: spouse
+        entity_types: [Individual]
+        required: true
+        multiple: true
+    optional_properties:
+      - family_reference
+      - type
+    properties:
+      family_reference:
+        type: Reference
+        description: Reference to Family entity
+      type:
+        type: Enum
+        values: [Marriage, Partnership, Civil Union]
+        description: Type of spousal relationship
+    min_participants: 2
+    max_participants: 2
+
+  Family-Child:
+    description: Links an individual as a child in a family
+    participants:
+      - role: family
+        entity_types: [Family]
+        required: true
+      - role: child
+        entity_types: [Individual]
+        required: true
+    optional_properties:
+      - pedigree
+    properties:
+      pedigree:
+        type: Enum
+        values: [Birth, Adopted, Foster, Sealing]
+    min_participants: 2
+    max_participants: 2
+
+  Family-Spouse:
+    description: Links an individual as a spouse in a family
+    participants:
+      - role: family
+        entity_types: [Family]
+        required: true
+      - role: spouse
+        entity_types: [Individual]
+        required: true
+    min_participants: 2
+    max_participants: 2
+
+  Source-Citation:
+    description: Links an entity to a source with citation details
+    participants:
+      - role: citing_entity
+        entity_types: [Individual, Family, Source, Multimedia, SharedNote]
+        required: true
+      - role: source
+        entity_types: [Source]
+        required: true
+    optional_properties:
+      - page
+      - confidence
+      - data_quality
+      - entry_date
+      - transcription
+    properties:
+      page:
+        type: Text
+        description: Specific location within source
+      confidence:
+        type: Enum
+        values: [Very High, High, Medium, Low, Very Low]
+        description: Confidence in this citation
+      data_quality:
+        type: Enum
+        values: [0, 1, 2, 3]
+        description: |
+          Quality assessment:
+          0=Unreliable, 1=Questionable, 2=Secondary, 3=Primary
+      entry_date:
+        type: Temporal
+        description: Date information was entered from source
+      transcription:
+        type: Text
+        description: Relevant text transcribed from source
+    min_participants: 2
+    max_participants: 2
+
+  Repository-Source:
+    description: Links a source to the repository that holds it
+    participants:
+      - role: repository
+        entity_types: [Repository]
+        required: true
+      - role: source
+        entity_types: [Source]
+        required: true
+    optional_properties:
+      - call_number
+      - media_type
+    properties:
+      call_number:
+        type: Text
+        description: Repository's reference number
+      media_type:
+        type: Enum
+        values: [Audio, Book, Card, Electronic, Fiche, Film, Magazine, Manuscript, Map, Newspaper, Photo, Tombstone, Video, Other]
+    min_participants: 2
+    max_participants: 2
+
+  Media-Reference:
+    description: Links an entity to a multimedia object
+    participants:
+      - role: referencing_entity
+        entity_types: [Individual, Family, Source, Repository, SharedNote]
+        required: true
+      - role: media
+        entity_types: [Multimedia]
+        required: true
+    optional_properties:
+      - crop_region
+      - title
+      - notes
+    properties:
+      crop_region:
+        type: Map
+        description: Cropping rectangle (x, y, width, height)
+      title:
+        type: Text
+        description: Title for this reference
+      notes:
+        type: Text
+    min_participants: 2
+    max_participants: 2
+
+  Note-Reference:
+    description: Links an entity to a shared note
+    participants:
+      - role: referencing_entity
+        entity_types: [Individual, Family, Source, Repository, Multimedia]
+        required: true
+      - role: note
+        entity_types: [SharedNote]
+        required: true
+    min_participants: 2
+    max_participants: 2
+
+state_machines:
+  individual_lifecycle:
+    initial_state: Draft
+    states:
+      - Draft
+      - Research
+      - Verified
+      - Published
+      - Living
+      - Deceased
+    transitions:
+      Draft: [Research, Verified, Living]
+      Research: [Draft, Verified, Living]
+      Verified: [Research, Published, Living, Deceased]
+      Published: [Deceased]
+      Living: [Deceased]
+      Deceased: []
+    terminal_states:
+      - Deceased
+
+  source_quality:
+    initial_state: Unverified
+    states:
+      - Unverified
+      - Verified
+      - Primary
+      - Secondary
+      - Questionable
+    transitions:
+      Unverified: [Verified, Questionable]
+      Verified: [Primary, Secondary, Questionable]
+      Primary: [Questionable]
+      Secondary: [Questionable]
+      Questionable: [Unverified]
+    terminal_states: []
+
+  family_lifecycle:
+    initial_state: Draft
+    states:
+      - Draft
+      - Verified
+    transitions:
+      Draft: [Verified]
+      Verified: [Draft]
+    terminal_states: []
