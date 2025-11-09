@@ -1,0 +1,764 @@
+# GRAMPS Schema
+# Based on GRAMPS XML format
+# https://gramps-project.org/
+
+schema:
+  id: gramps
+  version: "5.1.0"
+  name: GRAMPS (Genealogical Research and Analysis Management Programming System)
+  description: Schema for GRAMPS genealogy software
+
+entity_types:
+  Person:
+    description: An individual person
+    required_properties:
+      - gender
+    optional_properties:
+      - primary_name
+      - alternate_names
+      - birth_ref
+      - death_ref
+      - event_refs
+      - parent_family_refs
+      - family_refs
+      - address_list
+      - attribute_list
+      - url_list
+      - lds_ordinance_list
+      - notes
+      - media_refs
+      - source_refs
+      - citations
+      - private
+      - change
+      - tag_list
+    properties:
+      gender:
+        type: Enum
+        values: [M, F, U, X]
+        description: Gender (M=Male, F=Female, U=Unknown, X=Other)
+        validation:
+          - rule: Required
+      primary_name:
+        type: Map
+        description: Primary name structure (first, surname, prefix, suffix, title, etc.)
+      alternate_names:
+        type: Collection
+        item_type: Map
+        description: Alternative names
+      birth_ref:
+        type: Reference
+        description: Reference to birth event
+      death_ref:
+        type: Reference
+        description: Reference to death event
+      event_refs:
+        type: Collection
+        item_type: Reference
+        description: References to other life events
+      parent_family_refs:
+        type: Collection
+        item_type: Reference
+        description: References to families where this person is a child
+      family_refs:
+        type: Collection
+        item_type: Reference
+        description: References to families where this person is a parent
+      address_list:
+        type: Collection
+        item_type: Map
+        description: List of addresses
+      attribute_list:
+        type: Collection
+        item_type: Map
+        description: Custom attributes (occupation, description, etc.)
+      url_list:
+        type: Collection
+        item_type: Map
+        description: Associated URLs
+      lds_ordinance_list:
+        type: Collection
+        item_type: Map
+        description: LDS ordinances
+      notes:
+        type: Text
+        description: Notes about the person
+      media_refs:
+        type: Collection
+        item_type: Reference
+        description: Media object references
+      source_refs:
+        type: Collection
+        item_type: Reference
+        description: Source references
+      citations:
+        type: Collection
+        item_type: Reference
+        description: Citation references
+      private:
+        type: Boolean
+        default: false
+        description: Mark as private
+      change:
+        type: Temporal
+        description: Last change timestamp
+      tag_list:
+        type: Collection
+        item_type: Text
+        description: Tags for organization
+    valid_states:
+      - Active
+      - Deceased
+      - Private
+      - Public
+    default_state: Active
+
+  Family:
+    description: A family unit
+    required_properties:
+      - relationship_type
+    optional_properties:
+      - father_ref
+      - mother_ref
+      - child_refs
+      - event_refs
+      - lds_ordinance_list
+      - attribute_list
+      - notes
+      - media_refs
+      - source_refs
+      - citations
+      - private
+      - change
+      - tag_list
+    properties:
+      relationship_type:
+        type: Enum
+        values: [Married, Unmarried, Civil Union, Unknown, Other]
+        description: Type of relationship
+        validation:
+          - rule: Required
+      father_ref:
+        type: Reference
+        description: Reference to father
+      mother_ref:
+        type: Reference
+        description: Reference to mother
+      child_refs:
+        type: Collection
+        item_type: Map
+        description: References to children with relationship info
+      event_refs:
+        type: Collection
+        item_type: Reference
+        description: Family events (marriage, divorce, etc.)
+      lds_ordinance_list:
+        type: Collection
+        item_type: Map
+      attribute_list:
+        type: Collection
+        item_type: Map
+        description: Custom attributes
+      notes:
+        type: Text
+      media_refs:
+        type: Collection
+        item_type: Reference
+      source_refs:
+        type: Collection
+        item_type: Reference
+      citations:
+        type: Collection
+        item_type: Reference
+      private:
+        type: Boolean
+        default: false
+      change:
+        type: Temporal
+      tag_list:
+        type: Collection
+        item_type: Text
+    valid_states:
+      - Active
+      - Dissolved
+      - Private
+    default_state: Active
+
+  Event:
+    description: An event in a person's or family's life
+    required_properties:
+      - event_type
+    optional_properties:
+      - date
+      - place_ref
+      - description
+      - attribute_list
+      - notes
+      - media_refs
+      - source_refs
+      - citations
+      - private
+      - change
+      - tag_list
+    properties:
+      event_type:
+        type: Enum
+        values: [
+          Birth, Death, Adoption, Baptism, Bar Mitzvah, Bat Mitzvah, Burial,
+          Cause Of Death, Census, Christening, Confirmation, Cremation,
+          Degree, Education, Elected, Emigration, First Communion, Graduation,
+          Immigration, Military Service, Naturalization, Occupation, Ordination,
+          Probate, Religion, Residence, Retirement, Will,
+          Marriage, Marriage Banns, Marriage Contract, Marriage License, Marriage Settlement,
+          Divorce, Divorce Filing, Engagement, Annulment,
+          Custom
+        ]
+        validation:
+          - rule: Required
+      date:
+        type: Temporal
+        description: Event date (may be approximate or range)
+      place_ref:
+        type: Reference
+        description: Reference to place
+      description:
+        type: Text
+        description: Event description
+      attribute_list:
+        type: Collection
+        item_type: Map
+        description: Event attributes (age at event, witness, etc.)
+      notes:
+        type: Text
+      media_refs:
+        type: Collection
+        item_type: Reference
+      source_refs:
+        type: Collection
+        item_type: Reference
+      citations:
+        type: Collection
+        item_type: Reference
+      private:
+        type: Boolean
+        default: false
+      change:
+        type: Temporal
+      tag_list:
+        type: Collection
+        item_type: Text
+    valid_states:
+      - Verified
+      - Unverified
+      - Estimated
+      - Calculated
+    default_state: Unverified
+
+  Place:
+    description: A geographic place
+    required_properties:
+      - place_name
+    optional_properties:
+      - place_type
+      - code
+      - longitude
+      - latitude
+      - alt_names
+      - place_refs
+      - url_list
+      - notes
+      - media_refs
+      - source_refs
+      - citations
+      - private
+      - change
+      - tag_list
+    properties:
+      place_name:
+        type: Text
+        description: Name of the place
+        validation:
+          - rule: Required
+      place_type:
+        type: Enum
+        values: [
+          Unknown, Custom, Country, State, County, City, Parish, Locality,
+          Street, Province, Region, Department, Neighborhood, District,
+          Borough, Municipality, Town, Village, Hamlet, Farm, Building, Number
+        ]
+      code:
+        type: Text
+        description: Place code (postal code, etc.)
+      longitude:
+        type: Float
+        min: -180.0
+        max: 180.0
+        description: Longitude coordinate
+      latitude:
+        type: Float
+        min: -90.0
+        max: 90.0
+        description: Latitude coordinate
+      alt_names:
+        type: Collection
+        item_type: Map
+        description: Alternative names and dates
+      place_refs:
+        type: Collection
+        item_type: Reference
+        description: References to enclosing places (hierarchy)
+      url_list:
+        type: Collection
+        item_type: Map
+      notes:
+        type: Text
+      media_refs:
+        type: Collection
+        item_type: Reference
+      source_refs:
+        type: Collection
+        item_type: Reference
+      citations:
+        type: Collection
+        item_type: Reference
+      private:
+        type: Boolean
+        default: false
+      change:
+        type: Temporal
+      tag_list:
+        type: Collection
+        item_type: Text
+    valid_states:
+      - Current
+      - Historical
+      - Unknown
+    default_state: Current
+
+  Source:
+    description: A source of information
+    required_properties:
+      - title
+    optional_properties:
+      - author
+      - pubinfo
+      - abbrev
+      - repository_refs
+      - attribute_list
+      - notes
+      - media_refs
+      - private
+      - change
+      - tag_list
+    properties:
+      title:
+        type: Text
+        description: Source title
+        validation:
+          - rule: Required
+      author:
+        type: Text
+        description: Author or creator
+      pubinfo:
+        type: Text
+        description: Publication information
+      abbrev:
+        type: Text
+        description: Abbreviated title
+      repository_refs:
+        type: Collection
+        item_type: Reference
+        description: Repositories that hold this source
+      attribute_list:
+        type: Collection
+        item_type: Map
+      notes:
+        type: Text
+      media_refs:
+        type: Collection
+        item_type: Reference
+      private:
+        type: Boolean
+        default: false
+      change:
+        type: Temporal
+      tag_list:
+        type: Collection
+        item_type: Text
+    valid_states:
+      - Unverified
+      - Verified
+      - Primary
+      - Secondary
+    default_state: Unverified
+
+  Citation:
+    description: A specific citation of a source
+    required_properties:
+      - source_ref
+    optional_properties:
+      - date
+      - page
+      - confidence
+      - attribute_list
+      - notes
+      - media_refs
+      - private
+      - change
+      - tag_list
+    properties:
+      source_ref:
+        type: Reference
+        description: Reference to source
+        validation:
+          - rule: Required
+      date:
+        type: Temporal
+        description: Date of information in source
+      page:
+        type: Text
+        description: Specific location in source
+      confidence:
+        type: Enum
+        values: [Very Low, Low, Normal, High, Very High]
+        description: Confidence level
+        default: Normal
+      attribute_list:
+        type: Collection
+        item_type: Map
+      notes:
+        type: Text
+      media_refs:
+        type: Collection
+        item_type: Reference
+      private:
+        type: Boolean
+        default: false
+      change:
+        type: Temporal
+      tag_list:
+        type: Collection
+        item_type: Text
+    valid_states:
+      - Draft
+      - Reviewed
+      - Verified
+    default_state: Draft
+
+  Repository:
+    description: A repository that holds sources
+    required_properties:
+      - name
+    optional_properties:
+      - repository_type
+      - address_list
+      - url_list
+      - notes
+      - private
+      - change
+      - tag_list
+    properties:
+      name:
+        type: Text
+        description: Repository name
+        validation:
+          - rule: Required
+      repository_type:
+        type: Enum
+        values: [Library, Cemetery, Church, Archive, Album, Website, Bookstore, Collection, Safe, Other, Unknown]
+      address_list:
+        type: Collection
+        item_type: Map
+      url_list:
+        type: Collection
+        item_type: Map
+      notes:
+        type: Text
+      private:
+        type: Boolean
+        default: false
+      change:
+        type: Temporal
+      tag_list:
+        type: Collection
+        item_type: Text
+    valid_states:
+      - Active
+      - Inactive
+    default_state: Active
+
+  MediaObject:
+    description: A media file (image, document, etc.)
+    required_properties:
+      - file_path
+    optional_properties:
+      - mime_type
+      - description
+      - checksum
+      - date
+      - attribute_list
+      - notes
+      - source_refs
+      - citations
+      - private
+      - change
+      - tag_list
+    properties:
+      file_path:
+        type: Text
+        description: Path to media file
+        validation:
+          - rule: Required
+      mime_type:
+        type: Text
+        description: MIME type (image/jpeg, etc.)
+      description:
+        type: Text
+        description: Description of media
+      checksum:
+        type: Text
+        description: File checksum for integrity
+      date:
+        type: Temporal
+        description: Date associated with media
+      attribute_list:
+        type: Collection
+        item_type: Map
+      notes:
+        type: Text
+      source_refs:
+        type: Collection
+        item_type: Reference
+      citations:
+        type: Collection
+        item_type: Reference
+      private:
+        type: Boolean
+        default: false
+      change:
+        type: Temporal
+      tag_list:
+        type: Collection
+        item_type: Text
+    valid_states:
+      - Available
+      - Missing
+      - Private
+    default_state: Available
+
+  Note:
+    description: A note that can be attached to other objects
+    required_properties:
+      - text
+    optional_properties:
+      - note_type
+      - format
+      - private
+      - change
+      - tag_list
+    properties:
+      text:
+        type: Text
+        description: Note content
+        validation:
+          - rule: Required
+      note_type:
+        type: Enum
+        values: [
+          General, Research, Transcript, Person Note, Attribute,
+          Address, Association, LDS, Family Note, Event Note,
+          Event Reference, Source Note, Source Reference, Place Note,
+          Repository, Repository Reference, Media Note, Media Reference,
+          Child Reference, Citation
+        ]
+        default: General
+      format:
+        type: Enum
+        values: [Formatted, Flowed]
+        default: Flowed
+      private:
+        type: Boolean
+        default: false
+      change:
+        type: Temporal
+      tag_list:
+        type: Collection
+        item_type: Text
+    valid_states:
+      - Draft
+      - Final
+    default_state: Draft
+
+relationship_types:
+  Parent-Child:
+    description: Parent to child relationship
+    participants:
+      - role: parent
+        entity_types: [Person]
+        required: true
+        multiple: true
+      - role: child
+        entity_types: [Person]
+        required: true
+        multiple: false
+    optional_properties:
+      - relationship_type
+      - mother_relation
+      - father_relation
+    properties:
+      relationship_type:
+        type: Enum
+        values: [Birth, Adopted, Stepchild, Sponsored, Foster, Unknown]
+        default: Birth
+      mother_relation:
+        type: Enum
+        values: [Birth, Adopted, Stepchild, Sponsored, Foster, Unknown]
+      father_relation:
+        type: Enum
+        values: [Birth, Adopted, Stepchild, Sponsored, Foster, Unknown]
+    min_participants: 2
+    max_participants: 3
+
+  Family-Parent:
+    description: Links person as parent in a family
+    participants:
+      - role: family
+        entity_types: [Family]
+        required: true
+      - role: parent
+        entity_types: [Person]
+        required: true
+    min_participants: 2
+    max_participants: 2
+
+  Family-Child:
+    description: Links person as child in a family
+    participants:
+      - role: family
+        entity_types: [Family]
+        required: true
+      - role: child
+        entity_types: [Person]
+        required: true
+    optional_properties:
+      - mother_relation
+      - father_relation
+    properties:
+      mother_relation:
+        type: Enum
+        values: [Birth, Adopted, Stepchild, Sponsored, Foster, Unknown]
+      father_relation:
+        type: Enum
+        values: [Birth, Adopted, Stepchild, Sponsored, Foster, Unknown]
+    min_participants: 2
+    max_participants: 2
+
+  Person-Event:
+    description: Links a person to an event
+    participants:
+      - role: person
+        entity_types: [Person]
+        required: true
+      - role: event
+        entity_types: [Event]
+        required: true
+    optional_properties:
+      - role_in_event
+      - private
+    properties:
+      role_in_event:
+        type: Enum
+        values: [Primary, Family, Witness, Unknown]
+        default: Primary
+      private:
+        type: Boolean
+        default: false
+    min_participants: 2
+    max_participants: 2
+
+  Family-Event:
+    description: Links a family to an event
+    participants:
+      - role: family
+        entity_types: [Family]
+        required: true
+      - role: event
+        entity_types: [Event]
+        required: true
+    min_participants: 2
+    max_participants: 2
+
+  Event-Place:
+    description: Links an event to a place
+    participants:
+      - role: event
+        entity_types: [Event]
+        required: true
+      - role: place
+        entity_types: [Place]
+        required: true
+    min_participants: 2
+    max_participants: 2
+
+  Citation-Source:
+    description: Links a citation to its source
+    participants:
+      - role: citation
+        entity_types: [Citation]
+        required: true
+      - role: source
+        entity_types: [Source]
+        required: true
+    min_participants: 2
+    max_participants: 2
+
+  Source-Repository:
+    description: Links a source to a repository
+    participants:
+      - role: source
+        entity_types: [Source]
+        required: true
+      - role: repository
+        entity_types: [Repository]
+        required: true
+    optional_properties:
+      - call_number
+      - media_type
+    properties:
+      call_number:
+        type: Text
+        description: Call number or reference
+      media_type:
+        type: Enum
+        values: [Book, Film, Electronic, Audio, Card, Fiche, Magazine, Manuscript, Map, Newspaper, Photo, Tombstone, Video, Other, Unknown]
+    min_participants: 2
+    max_participants: 2
+
+state_machines:
+  verification_lifecycle:
+    initial_state: Unverified
+    states:
+      - Unverified
+      - Verified
+      - Estimated
+      - Calculated
+    transitions:
+      Unverified: [Verified, Estimated, Calculated]
+      Verified: [Unverified]
+      Estimated: [Verified, Unverified]
+      Calculated: [Verified, Unverified]
+    terminal_states: []
+
+  person_lifecycle:
+    initial_state: Active
+    states:
+      - Active
+      - Deceased
+      - Private
+      - Public
+    transitions:
+      Active: [Deceased, Private, Public]
+      Deceased: [Private, Public]
+      Private: [Public]
+      Public: [Private]
+    terminal_states: []

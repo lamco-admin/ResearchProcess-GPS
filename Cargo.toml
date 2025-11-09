@@ -4,6 +4,7 @@ members = [
     "crates/rp-core",
     "crates/rp-meta-core",  # NEW: Universal meta-model primitives
     "crates/rp-schema",     # NEW: Schema system for data model definitions
+    "crates/rp-wasm",       # NEW: WASM bridge for web interface
     "crates/rp-protocol",
     "crates/rp-engine",
     "crates/rp-storage",

@@ -1,0 +1,204 @@
+# Basic GEDCOM-like Schema
+# Simplified version for demonstration and initial development
+
+schema:
+  id: gedcom-basic
+  version: "1.0.0"
+  name: Basic GEDCOM Schema
+  description: Simplified GEDCOM-compatible schema for genealogical research
+
+entity_types:
+  Person:
+    description: An individual person in the genealogical database
+    required_properties:
+      - name
+    optional_properties:
+      - sex
+      - birth_date
+      - birth_place
+      - death_date
+      - death_place
+      - occupation
+      - notes
+    properties:
+      name:
+        type: Text
+        description: Full name of the person
+        validation:
+          - rule: Required
+      sex:
+        type: Enum
+        values: [M, F, U]
+        description: Sex/gender (M=Male, F=Female, U=Unknown)
+      birth_date:
+        type: Temporal
+        description: Date of birth
+      birth_place:
+        type: Spatial
+        description: Place of birth
+      death_date:
+        type: Temporal
+        description: Date of death
+      death_place:
+        type: Spatial
+        description: Place of death
+      occupation:
+        type: Text
+        description: Occupation or profession
+      notes:
+        type: Text
+        description: Additional notes
+    valid_states:
+      - Draft
+      - Research
+      - Verified
+      - Published
+    default_state: Draft
+
+  Family:
+    description: A family unit (marriage, partnership, or parent-child group)
+    optional_properties:
+      - marriage_date
+      - marriage_place
+      - notes
+    properties:
+      marriage_date:
+        type: Temporal
+        description: Date of marriage
+      marriage_place:
+        type: Spatial
+        description: Place of marriage
+      notes:
+        type: Text
+        description: Family notes
+    valid_states:
+      - Draft
+      - Verified
+    default_state: Draft
+
+  Source:
+    description: A source document or record
+    required_properties:
+      - title
+      - type
+    optional_properties:
+      - author
+      - publication_date
+      - repository
+      - call_number
+      - url
+    properties:
+      title:
+        type: Text
+        description: Title of the source
+        validation:
+          - rule: Required
+      type:
+        type: Enum
+        values: [Birth Record, Death Record, Census, Marriage Record, Other]
+        description: Type of source
+      author:
+        type: Text
+        description: Author or creator
+      publication_date:
+        type: Temporal
+        description: Date of publication
+      repository:
+        type: Text
+        description: Repository or archive name
+      call_number:
+        type: Text
+        description: Call number or reference
+      url:
+        type: Text
+        description: URL to online resource
+    valid_states:
+      - Unverified
+      - Verified
+      - Primary
+      - Secondary
+    default_state: Unverified
+
+relationship_types:
+  Parent-Child:
+    description: Parent to child relationship
+    participants:
+      - role: parent
+        entity_types: [Person]
+        required: true
+        multiple: true  # Can have multiple parents
+      - role: child
+        entity_types: [Person]
+        required: true
+        multiple: false
+    optional_properties:
+      - biological
+      - adopted
+    properties:
+      biological:
+        type: Boolean
+        description: Is this a biological relationship?
+        default: true
+      adopted:
+        type: Boolean
+        description: Is this an adopted relationship?
+        default: false
+    min_participants: 2
+    max_participants: 3  # Two parents and one child
+
+  Spouse:
+    description: Marriage or partnership
+    participants:
+      - role: spouse
+        entity_types: [Person]
+        required: true
+        multiple: true  # Two spouses
+    optional_properties:
+      - marriage_date
+      - divorce_date
+    properties:
+      marriage_date:
+        type: Temporal
+        description: Date of marriage
+      divorce_date:
+        type: Temporal
+        description: Date of divorce (if applicable)
+    min_participants: 2
+    max_participants: 2
+
+  Person-Source:
+    description: Links a person to a source document
+    participants:
+      - role: person
+        entity_types: [Person]
+        required: true
+      - role: source
+        entity_types: [Source]
+        required: true
+    optional_properties:
+      - page
+      - confidence
+    properties:
+      page:
+        type: Text
+        description: Page number or location in source
+      confidence:
+        type: Enum
+        values: [High, Medium, Low]
+        description: Confidence in this source's information
+
+state_machines:
+  person_lifecycle:
+    initial_state: Draft
+    states:
+      - Draft
+      - Research
+      - Verified
+      - Published
+    transitions:
+      Draft: [Research, Verified]
+      Research: [Draft, Verified]
+      Verified: [Research, Published]
+      Published: []  # Terminal state
+    terminal_states:
+      - Published
