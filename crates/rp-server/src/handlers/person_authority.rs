@@ -10,6 +10,7 @@
 use crate::{error::ApiResult, state::AppState, ApiError};
 use axum::{
     extract::{Path, Query, State},
+    http::StatusCode,
     response::Json,
 };
 use rp_core::person::{
@@ -18,7 +19,7 @@ use rp_core::person::{
     SourcePerson, PersonMerge, Sex, PersonConfidence,
     GenealogyDate, DateCertainty,
 };
-use rp_storage_postgres::{PersonRepository, PostgresPersonRepository, PersonWithData};
+use rp_storage_postgres::{PersonRepository, PostgresPersonRepository};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
@@ -43,7 +44,7 @@ pub struct CreatePersonRequest {
     pub death_day: Option<u8>,
     pub sex: Option<Sex>,
     pub occupation: Option<String>,
-    pub residence: Option<String>,
+    pub religion: Option<String>,
     pub notes: Option<String>,
     pub conclusion_confidence: Option<PersonConfidence>,
 }
@@ -63,7 +64,7 @@ pub struct UpdatePersonRequest {
     pub death_day: Option<u8>,
     pub sex: Option<Sex>,
     pub occupation: Option<String>,
-    pub residence: Option<String>,
+    pub religion: Option<String>,
     pub notes: Option<String>,
     pub conclusion_confidence: Option<PersonConfidence>,
 }
@@ -81,9 +82,9 @@ pub struct PersonResponse {
     pub death_date: Option<GenealogyDate>,
     pub sex: Sex,
     pub occupation: Option<String>,
-    pub residence: Option<String>,
+    pub religion: Option<String>,
     pub notes: Option<String>,
-    pub conclusion_confidence: PersonConfidence,
+    pub conclusion_confidence: Option<PersonConfidence>,
     pub is_archived: bool,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
@@ -91,6 +92,7 @@ pub struct PersonResponse {
 
 impl From<Person> for PersonResponse {
     fn from(person: Person) -> Self {
+        let is_archived = person.is_archived();
         Self {
             person_id: person.person_id,
             canonical_name: person.canonical_name(),
@@ -103,10 +105,10 @@ impl From<Person> for PersonResponse {
             death_date: person.death_date,
             sex: person.sex,
             occupation: person.occupation,
-            residence: person.residence,
+            religion: person.religion,
             notes: person.notes,
             conclusion_confidence: person.conclusion_confidence,
-            is_archived: person.is_archived,
+            is_archived,
             created_at: person.created_at,
             updated_at: person.updated_at,
         }
@@ -209,9 +211,13 @@ impl From<PersonRelationship> for RelationshipResponse {
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct AddSourceLinkRequest {
     pub source_id: Uuid,
-    pub citation: String,
-    pub quality: String,
+    pub extracted_name_full: Option<String>,
+    pub extracted_name_given: Option<String>,
+    pub extracted_name_surname: Option<String>,
+    pub extracted_role: Option<String>,
+    pub page_reference: Option<String>,
     pub notes: Option<String>,
+    pub confidence: Option<PersonConfidence>,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
@@ -219,9 +225,13 @@ pub struct SourceLinkResponse {
     pub source_person_id: Uuid,
     pub person_id: Uuid,
     pub source_id: Uuid,
-    pub citation: String,
-    pub quality: String,
+    pub extracted_name_full: Option<String>,
+    pub extracted_name_given: Option<String>,
+    pub extracted_name_surname: Option<String>,
+    pub extracted_role: Option<String>,
+    pub page_reference: Option<String>,
     pub notes: Option<String>,
+    pub confidence: PersonConfidence,
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
@@ -231,9 +241,13 @@ impl From<SourcePerson> for SourceLinkResponse {
             source_person_id: sp.source_person_id,
             person_id: sp.person_id,
             source_id: sp.source_id,
-            citation: sp.citation,
-            quality: sp.quality,
+            extracted_name_full: sp.extracted_name_full,
+            extracted_name_given: sp.extracted_name_given,
+            extracted_name_surname: sp.extracted_name_surname,
+            extracted_role: sp.extracted_role,
+            page_reference: sp.page_reference,
             notes: sp.notes,
+            confidence: sp.confidence,
             created_at: sp.created_at,
         }
     }
@@ -284,20 +298,20 @@ pub struct PersonWithAllDataResponse {
     pub merges: Vec<MergeResponse>,
 }
 
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, Deserialize, ToSchema, utoipa::IntoParams)]
 pub struct ListPersonsQuery {
     pub limit: Option<i64>,
     pub offset: Option<i64>,
     pub include_archived: Option<bool>,
 }
 
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, Deserialize, ToSchema, utoipa::IntoParams)]
 pub struct SearchPersonsQuery {
     pub query: String,
     pub limit: Option<i64>,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct PersonListResponse {
     pub persons: Vec<PersonResponse>,
     pub total: i64,
@@ -305,7 +319,7 @@ pub struct PersonListResponse {
     pub offset: i64,
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct ArchivePersonRequest {
     pub reason: String,
 }
@@ -395,8 +409,8 @@ pub async fn create_person(
     if let Some(occupation) = request.occupation {
         builder = builder.occupation(&occupation);
     }
-    if let Some(residence) = request.residence {
-        builder = builder.residence(&residence);
+    if let Some(religion) = request.religion {
+        builder = builder.religion(&religion);
     }
     if let Some(notes) = request.notes {
         builder = builder.notes(&notes);
@@ -409,7 +423,7 @@ pub async fn create_person(
         .map_err(|e| ApiError::Validation(e.to_string()))?;
 
     let created = repo.create_person(&person).await
-        .map_err(|e| ApiError::Database(e.into()))?;
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
 
     Ok(Json(PersonResponse::from(created)))
 }
@@ -435,7 +449,7 @@ pub async fn get_person(
     let repo = PostgresPersonRepository::new(state.pg_pool.clone());
 
     let person = repo.get_person(id).await
-        .map_err(|e| ApiError::Database(e.into()))?
+        .map_err(|e| ApiError::Internal(e.to_string()))?
         .ok_or(ApiError::NotFound)?;
 
     Ok(Json(PersonResponse::from(person)))
@@ -466,7 +480,7 @@ pub async fn update_person(
 
     // Get existing person
     let mut person = repo.get_person(id).await
-        .map_err(|e| ApiError::Database(e.into()))?
+        .map_err(|e| ApiError::Internal(e.to_string()))?
         .ok_or(ApiError::NotFound)?;
 
     // Update fields if provided
@@ -491,14 +505,14 @@ pub async fn update_person(
     if let Some(occupation) = request.occupation {
         person.occupation = Some(occupation);
     }
-    if let Some(residence) = request.residence {
-        person.residence = Some(residence);
+    if let Some(religion) = request.religion {
+        person.religion = Some(religion);
     }
     if let Some(notes) = request.notes {
         person.notes = Some(notes);
     }
     if let Some(confidence) = request.conclusion_confidence {
-        person.conclusion_confidence = confidence;
+        person.conclusion_confidence = Some(confidence);
     }
 
     // Update birth date if any birth fields are provided
@@ -528,7 +542,7 @@ pub async fn update_person(
     }
 
     let updated = repo.update_person(&person).await
-        .map_err(|e| ApiError::Database(e.into()))?;
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
 
     Ok(Json(PersonResponse::from(updated)))
 }
@@ -552,14 +566,14 @@ pub async fn archive_person(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
     Json(request): Json<ArchivePersonRequest>,
-) -> ApiResult<()> {
+) -> ApiResult<StatusCode> {
     let repo = PostgresPersonRepository::new(state.pg_pool.clone());
     let user_id = Uuid::now_v7(); // TODO: Get from auth context
 
     repo.archive_person(id, request.reason, user_id).await
-        .map_err(|e| ApiError::Database(e.into()))?;
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
 
-    Ok(())
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Unarchive a person
@@ -579,14 +593,14 @@ pub async fn archive_person(
 pub async fn unarchive_person(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
-) -> ApiResult<()> {
+) -> ApiResult<StatusCode> {
     let repo = PostgresPersonRepository::new(state.pg_pool.clone());
     let user_id = Uuid::now_v7(); // TODO: Get from auth context
 
     repo.unarchive_person(id, user_id).await
-        .map_err(|e| ApiError::Database(e.into()))?;
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
 
-    Ok(())
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// List persons with pagination
@@ -616,13 +630,13 @@ pub async fn list_persons(
         repo.list_persons(limit, offset).await
     } else {
         repo.list_active_persons(limit, offset).await
-    }.map_err(|e| ApiError::Database(e.into()))?;
+    }.map_err(|e| ApiError::Internal(e.to_string()))?;
 
     let total = if include_archived {
         repo.count_persons().await
     } else {
         repo.count_active_persons().await
-    }.map_err(|e| ApiError::Database(e.into()))?;
+    }.map_err(|e| ApiError::Internal(e.to_string()))?;
 
     let person_responses: Vec<PersonResponse> = persons.into_iter()
         .map(PersonResponse::from)
@@ -659,7 +673,7 @@ pub async fn search_persons(
     let limit = query.limit.unwrap_or(50).min(1000);
 
     let persons = repo.search_persons(&query.query, limit).await
-        .map_err(|e| ApiError::Database(e.into()))?;
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
 
     let person_responses: Vec<PersonResponse> = persons.into_iter()
         .map(PersonResponse::from)
@@ -689,14 +703,14 @@ pub async fn get_person_complete(
     let repo = PostgresPersonRepository::new(state.pg_pool.clone());
 
     let person_data = repo.get_person_with_all_data(id).await
-        .map_err(|e| ApiError::Database(e.into()))?
+        .map_err(|e| ApiError::Internal(e.to_string()))?
         .ok_or(ApiError::NotFound)?;
 
     Ok(Json(PersonWithAllDataResponse {
         person: PersonResponse::from(person_data.person),
         variants: person_data.variants.into_iter().map(VariantNameResponse::from).collect(),
         relationships: person_data.relationships.into_iter().map(RelationshipResponse::from).collect(),
-        sources: person_data.source_links.into_iter().map(SourceLinkResponse::from).collect(),
+        sources: person_data.sources.into_iter().map(SourceLinkResponse::from).collect(),
         merges: person_data.merges.into_iter().map(MergeResponse::from).collect(),
     }))
 }
@@ -730,11 +744,12 @@ pub async fn add_variant_name(
 
     // Verify person exists
     repo.get_person(person_id).await
-        .map_err(|e| ApiError::Database(e.into()))?
+        .map_err(|e| ApiError::Internal(e.to_string()))?
         .ok_or(ApiError::NotFound)?;
 
     // Build variant name
-    let mut builder = VariantName::builder(person_id, request.variant_type);
+    let mut builder = VariantName::builder(person_id)
+        .variant_type(request.variant_type);
 
     if let Some(given_name) = request.given_name {
         builder = builder.given_name(&given_name);
@@ -768,7 +783,7 @@ pub async fn add_variant_name(
         .map_err(|e| ApiError::Validation(e.to_string()))?;
 
     let created = repo.add_variant(&variant).await
-        .map_err(|e| ApiError::Database(e.into()))?;
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
 
     Ok(Json(VariantNameResponse::from(created)))
 }
@@ -795,11 +810,11 @@ pub async fn get_variant_names(
 
     // Verify person exists
     repo.get_person(person_id).await
-        .map_err(|e| ApiError::Database(e.into()))?
+        .map_err(|e| ApiError::Internal(e.to_string()))?
         .ok_or(ApiError::NotFound)?;
 
     let variants = repo.get_variants(person_id).await
-        .map_err(|e| ApiError::Database(e.into()))?;
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
 
     let variant_responses: Vec<VariantNameResponse> = variants.into_iter()
         .map(VariantNameResponse::from)
@@ -825,13 +840,13 @@ pub async fn get_variant_names(
 pub async fn delete_variant_name(
     State(state): State<Arc<AppState>>,
     Path(variant_id): Path<Uuid>,
-) -> ApiResult<()> {
+) -> ApiResult<StatusCode> {
     let repo = PostgresPersonRepository::new(state.pg_pool.clone());
 
     repo.delete_variant(variant_id).await
-        .map_err(|e| ApiError::Database(e.into()))?;
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
 
-    Ok(())
+    Ok(StatusCode::NO_CONTENT)
 }
 
 // =============================================================================
@@ -863,11 +878,11 @@ pub async fn add_relationship(
 
     // Verify both persons exist
     repo.get_person(person_id).await
-        .map_err(|e| ApiError::Database(e.into()))?
+        .map_err(|e| ApiError::Internal(e.to_string()))?
         .ok_or(ApiError::NotFound)?;
 
     repo.get_person(request.related_person_id).await
-        .map_err(|e| ApiError::Database(e.into()))?
+        .map_err(|e| ApiError::Internal(e.to_string()))?
         .ok_or_else(|| ApiError::Validation("Related person not found".to_string()))?;
 
     // Build start date if year is provided
@@ -893,11 +908,10 @@ pub async fn add_relationship(
     });
 
     // Build relationship
-    let mut builder = PersonRelationship::builder(
-        person_id,
-        request.related_person_id,
-        request.relationship_type
-    );
+    let mut builder = PersonRelationship::builder()
+        .person_id(person_id)
+        .related_person_id(request.related_person_id)
+        .relationship_type(request.relationship_type);
 
     if let Some(start_date) = start_date {
         builder = builder.start_date(start_date);
@@ -916,16 +930,15 @@ pub async fn add_relationship(
         .map_err(|e| ApiError::Validation(e.to_string()))?;
 
     let created = repo.add_relationship(&relationship).await
-        .map_err(|e| ApiError::Database(e.into()))?;
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
 
     // Create reciprocal relationship if requested
     if request.create_reciprocal.unwrap_or(true) {
         let reciprocal_type = request.relationship_type.reciprocal();
-        let mut reciprocal_builder = PersonRelationship::builder(
-            request.related_person_id,
-            person_id,
-            reciprocal_type
-        );
+        let mut reciprocal_builder = PersonRelationship::builder()
+            .person_id(request.related_person_id)
+            .related_person_id(person_id)
+            .relationship_type(reciprocal_type);
 
         if let Some(start_date) = relationship.start_date {
             reciprocal_builder = reciprocal_builder.start_date(start_date);
@@ -944,7 +957,7 @@ pub async fn add_relationship(
             .map_err(|e| ApiError::Validation(e.to_string()))?;
 
         repo.add_relationship(&reciprocal).await
-            .map_err(|e| ApiError::Database(e.into()))?;
+            .map_err(|e| ApiError::Internal(e.to_string()))?;
     }
 
     Ok(Json(RelationshipResponse::from(created)))
@@ -972,11 +985,11 @@ pub async fn get_relationships(
 
     // Verify person exists
     repo.get_person(person_id).await
-        .map_err(|e| ApiError::Database(e.into()))?
+        .map_err(|e| ApiError::Internal(e.to_string()))?
         .ok_or(ApiError::NotFound)?;
 
     let relationships = repo.get_relationships(person_id).await
-        .map_err(|e| ApiError::Database(e.into()))?;
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
 
     let relationship_responses: Vec<RelationshipResponse> = relationships.into_iter()
         .map(RelationshipResponse::from)
@@ -1002,13 +1015,13 @@ pub async fn get_relationships(
 pub async fn delete_relationship(
     State(state): State<Arc<AppState>>,
     Path(relationship_id): Path<Uuid>,
-) -> ApiResult<()> {
+) -> ApiResult<StatusCode> {
     let repo = PostgresPersonRepository::new(state.pg_pool.clone());
 
     repo.delete_relationship(relationship_id).await
-        .map_err(|e| ApiError::Database(e.into()))?;
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
 
-    Ok(())
+    Ok(StatusCode::NO_CONTENT)
 }
 
 // =============================================================================
@@ -1040,26 +1053,41 @@ pub async fn add_source_link(
 
     // Verify person exists
     repo.get_person(person_id).await
-        .map_err(|e| ApiError::Database(e.into()))?
+        .map_err(|e| ApiError::Internal(e.to_string()))?
         .ok_or(ApiError::NotFound)?;
 
     // Build source link
-    let mut builder = SourcePerson::builder(
-        person_id,
-        request.source_id,
-        &request.citation,
-        &request.quality
-    );
+    let mut builder = SourcePerson::builder()
+        .person_id(person_id)
+        .source_id(request.source_id);
 
+    if let Some(name) = request.extracted_name_full {
+        builder = builder.extracted_name_full(name);
+    }
+    if let Some(name) = request.extracted_name_given {
+        builder = builder.extracted_name_given(name);
+    }
+    if let Some(name) = request.extracted_name_surname {
+        builder = builder.extracted_name_surname(name);
+    }
+    if let Some(role) = request.extracted_role {
+        builder = builder.extracted_role(role);
+    }
+    if let Some(page_ref) = request.page_reference {
+        builder = builder.page_reference(page_ref);
+    }
     if let Some(notes) = request.notes {
-        builder = builder.notes(&notes);
+        builder = builder.notes(notes);
+    }
+    if let Some(confidence) = request.confidence {
+        builder = builder.confidence(confidence);
     }
 
     let source_link = builder.build()
         .map_err(|e| ApiError::Validation(e.to_string()))?;
 
     let created = repo.add_source_link(&source_link).await
-        .map_err(|e| ApiError::Database(e.into()))?;
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
 
     Ok(Json(SourceLinkResponse::from(created)))
 }
@@ -1086,11 +1114,11 @@ pub async fn get_source_links(
 
     // Verify person exists
     repo.get_person(person_id).await
-        .map_err(|e| ApiError::Database(e.into()))?
+        .map_err(|e| ApiError::Internal(e.to_string()))?
         .ok_or(ApiError::NotFound)?;
 
     let source_links = repo.get_source_links(person_id).await
-        .map_err(|e| ApiError::Database(e.into()))?;
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
 
     let source_responses: Vec<SourceLinkResponse> = source_links.into_iter()
         .map(SourceLinkResponse::from)
@@ -1116,13 +1144,13 @@ pub async fn get_source_links(
 pub async fn delete_source_link(
     State(state): State<Arc<AppState>>,
     Path(source_person_id): Path<Uuid>,
-) -> ApiResult<()> {
+) -> ApiResult<StatusCode> {
     let repo = PostgresPersonRepository::new(state.pg_pool.clone());
 
     repo.delete_source_link(source_person_id).await
-        .map_err(|e| ApiError::Database(e.into()))?;
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
 
-    Ok(())
+    Ok(StatusCode::NO_CONTENT)
 }
 
 // =============================================================================
@@ -1155,24 +1183,24 @@ pub async fn create_merge(
 
     // Verify both persons exist
     repo.get_person(source_person_id).await
-        .map_err(|e| ApiError::Database(e.into()))?
+        .map_err(|e| ApiError::Internal(e.to_string()))?
         .ok_or(ApiError::NotFound)?;
 
     repo.get_person(request.target_person_id).await
-        .map_err(|e| ApiError::Database(e.into()))?
+        .map_err(|e| ApiError::Internal(e.to_string()))?
         .ok_or_else(|| ApiError::Validation("Target person not found".to_string()))?;
 
     // Build merge record
-    let merge = PersonMerge::builder(
-        source_person_id,
-        request.target_person_id,
-        &request.merge_reason,
-        user_id
-    ).build()
+    let merge = PersonMerge::builder()
+        .source_person_id(source_person_id)
+        .target_person_id(request.target_person_id)
+        .merge_reason(&request.merge_reason)
+        .merged_by(user_id)
+        .build()
         .map_err(|e| ApiError::Validation(e.to_string()))?;
 
     let created = repo.create_merge(&merge).await
-        .map_err(|e| ApiError::Database(e.into()))?;
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
 
     Ok(Json(MergeResponse::from(created)))
 }
@@ -1197,14 +1225,14 @@ pub async fn reverse_merge(
     State(state): State<Arc<AppState>>,
     Path(merge_id): Path<Uuid>,
     Json(request): Json<ReverseMergeRequest>,
-) -> ApiResult<()> {
+) -> ApiResult<StatusCode> {
     let repo = PostgresPersonRepository::new(state.pg_pool.clone());
     let user_id = Uuid::now_v7(); // TODO: Get from auth context
 
     repo.reverse_merge(merge_id, request.reason, user_id).await
-        .map_err(|e| ApiError::Database(e.into()))?;
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
 
-    Ok(())
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Get all merges for a person
@@ -1229,11 +1257,11 @@ pub async fn get_merges(
 
     // Verify person exists
     repo.get_person(person_id).await
-        .map_err(|e| ApiError::Database(e.into()))?
+        .map_err(|e| ApiError::Internal(e.to_string()))?
         .ok_or(ApiError::NotFound)?;
 
     let merges = repo.get_merges_for_person(person_id).await
-        .map_err(|e| ApiError::Database(e.into()))?;
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
 
     let merge_responses: Vec<MergeResponse> = merges.into_iter()
         .map(MergeResponse::from)
