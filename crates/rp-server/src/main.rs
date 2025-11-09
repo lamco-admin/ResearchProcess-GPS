@@ -11,6 +11,28 @@ use rp_server::{
         websocket::websocket_handler,
         theories::{branch_theory, get_theory_evidence, get_theory_compliance_status},
         persons::{get_person_timeline, get_person_relationships, merge_persons},
+        person_authority::{
+            create_person as create_person_authority,
+            get_person as get_person_authority,
+            update_person as update_person_authority,
+            archive_person as archive_person_authority,
+            unarchive_person as unarchive_person_authority,
+            list_persons as list_persons_authority,
+            search_persons as search_persons_authority,
+            get_person_complete,
+            add_variant_name,
+            get_variant_names,
+            delete_variant_name,
+            add_relationship as add_person_relationship,
+            get_relationships as get_person_relationships_authority,
+            delete_relationship,
+            add_source_link,
+            get_source_links,
+            delete_source_link,
+            create_merge as create_person_merge,
+            reverse_merge,
+            get_merges,
+        },
         workspaces::{list_workspace_members, invite_workspace_member, remove_workspace_member},
         search::search_entities,
     },
@@ -42,6 +64,27 @@ use utoipa_swagger_ui::SwaggerUi;
         rp_server::handlers::persons::get_person_timeline,
         rp_server::handlers::persons::get_person_relationships,
         rp_server::handlers::persons::merge_persons,
+        // Person Authority Control endpoints
+        rp_server::handlers::person_authority::create_person,
+        rp_server::handlers::person_authority::get_person,
+        rp_server::handlers::person_authority::update_person,
+        rp_server::handlers::person_authority::archive_person,
+        rp_server::handlers::person_authority::unarchive_person,
+        rp_server::handlers::person_authority::list_persons,
+        rp_server::handlers::person_authority::search_persons,
+        rp_server::handlers::person_authority::get_person_complete,
+        rp_server::handlers::person_authority::add_variant_name,
+        rp_server::handlers::person_authority::get_variant_names,
+        rp_server::handlers::person_authority::delete_variant_name,
+        rp_server::handlers::person_authority::add_relationship,
+        rp_server::handlers::person_authority::get_relationships,
+        rp_server::handlers::person_authority::delete_relationship,
+        rp_server::handlers::person_authority::add_source_link,
+        rp_server::handlers::person_authority::get_source_links,
+        rp_server::handlers::person_authority::delete_source_link,
+        rp_server::handlers::person_authority::create_merge,
+        rp_server::handlers::person_authority::reverse_merge,
+        rp_server::handlers::person_authority::get_merges,
         rp_server::handlers::workspaces::list_workspace_members,
         rp_server::handlers::workspaces::invite_workspace_member,
         rp_server::handlers::workspaces::remove_workspace_member,
@@ -69,6 +112,31 @@ use utoipa_swagger_ui::SwaggerUi;
             rp_server::handlers::PersonRelationships,
             rp_server::handlers::MergePersonsRequest,
             rp_server::handlers::MergePersonsResponse,
+            // Person Authority Control types
+            rp_server::handlers::CreatePersonRequest,
+            rp_server::handlers::UpdatePersonRequest,
+            rp_server::handlers::PersonResponse,
+            rp_server::handlers::AddVariantNameRequest,
+            rp_server::handlers::VariantNameResponse,
+            rp_server::handlers::AddRelationshipRequest,
+            rp_server::handlers::RelationshipResponse,
+            rp_server::handlers::AddSourceLinkRequest,
+            rp_server::handlers::SourceLinkResponse,
+            rp_server::handlers::CreateMergeRequest,
+            rp_server::handlers::ReverseMergeRequest,
+            rp_server::handlers::MergeResponse,
+            rp_server::handlers::PersonWithAllDataResponse,
+            rp_server::handlers::ListPersonsQuery,
+            rp_server::handlers::SearchPersonsQuery,
+            rp_server::handlers::PersonListResponse,
+            rp_server::handlers::ArchivePersonRequest,
+            // Core Person types
+            rp_core::person::Sex,
+            rp_core::person::PersonConfidence,
+            rp_core::person::VariantNameType,
+            rp_core::person::PersonRelationshipType,
+            rp_core::person::GenealogyDate,
+            rp_core::person::DateCertainty,
             // Handler-specific types from workspaces.rs
             rp_server::handlers::WorkspaceMember,
             rp_server::handlers::WorkspaceMembers,
@@ -86,7 +154,8 @@ use utoipa_swagger_ui::SwaggerUi;
     tags(
         (name = "entities", description = "Entity management operations"),
         (name = "theories", description = "Theory-specific operations"),
-        (name = "persons", description = "Person-specific operations"),
+        (name = "persons", description = "Person-specific operations (legacy entity-based)"),
+        (name = "persons-authority", description = "Person Authority Control operations (new dedicated schema)"),
         (name = "workspaces", description = "Workspace management operations"),
         (name = "health", description = "Health check endpoints"),
     ),
@@ -160,10 +229,26 @@ fn create_router(state: Arc<AppState>) -> Router {
         .route("/theories/:id/branch", post(branch_theory))
         .route("/theories/:id/evidence", get(get_theory_evidence))
         .route("/theories/:id/compliance-status", get(get_theory_compliance_status))
-        // Person-specific endpoints
+        // Person-specific endpoints (old entity-based approach)
         .route("/persons/:id/timeline", get(get_person_timeline))
         .route("/persons/:id/relationships", get(get_person_relationships))
         .route("/persons/:id/merge", post(merge_persons))
+        // Person Authority Control endpoints (new dedicated schema)
+        .route("/persons/authority", post(create_person_authority).get(list_persons_authority))
+        .route("/persons/authority/search", get(search_persons_authority))
+        .route("/persons/authority/:id", get(get_person_authority).put(update_person_authority))
+        .route("/persons/authority/:id/complete", get(get_person_complete))
+        .route("/persons/authority/:id/archive", post(archive_person_authority))
+        .route("/persons/authority/:id/unarchive", post(unarchive_person_authority))
+        .route("/persons/authority/:id/variants", post(add_variant_name).get(get_variant_names))
+        .route("/persons/authority/variants/:variant_id", axum::routing::delete(delete_variant_name))
+        .route("/persons/authority/:id/relationships", post(add_person_relationship).get(get_person_relationships_authority))
+        .route("/persons/authority/relationships/:relationship_id", axum::routing::delete(delete_relationship))
+        .route("/persons/authority/:id/sources", post(add_source_link).get(get_source_links))
+        .route("/persons/authority/sources/:source_person_id", axum::routing::delete(delete_source_link))
+        .route("/persons/authority/:id/merge", post(create_person_merge))
+        .route("/persons/authority/:id/merges", get(get_merges))
+        .route("/persons/authority/merges/:merge_id/reverse", post(reverse_merge))
         // Workspace-specific endpoints
         .route("/workspaces/:id/members", get(list_workspace_members))
         .route("/workspaces/:id/invite", post(invite_workspace_member))

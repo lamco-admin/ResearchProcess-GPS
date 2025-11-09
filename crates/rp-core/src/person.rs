@@ -49,7 +49,7 @@ use validator::Validate;
 // =============================================================================
 
 /// Sex/Gender of a person
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "PascalCase")]
 pub enum Sex {
     Male,
@@ -74,7 +74,7 @@ impl fmt::Display for Sex {
 }
 
 /// Confidence level in a conclusion (1-5 scale)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum PersonConfidence {
     Speculative = 1,   // Weak hypothesis
@@ -97,7 +97,7 @@ impl fmt::Display for PersonConfidence {
 }
 
 /// Date certainty type for genealogical dates
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum DateCertainty {
     Exact,        // Known exact date
@@ -130,7 +130,7 @@ impl fmt::Display for DateCertainty {
 /// - Before: bef. 1850
 /// - After: aft. 1850
 /// - Between: bet. 1850 and 1860
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate, utoipa::ToSchema)]
 pub struct GenealogyDate {
     pub year: Option<i32>,
     #[validate(range(min = 1, max = 12))]
@@ -608,7 +608,7 @@ impl fmt::Display for Person {
 /// - **religious**: Name upon taking religious orders
 /// - **stage**: Professional/stage name
 /// - **documented**: Name found in a specific document
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum VariantNameType {
     Birth,
@@ -1014,7 +1014,7 @@ impl VariantNameBuilder {
 /// - **sibling**: person_id is sibling of related_person_id
 ///
 /// Extended family and non-biological relationships are also supported.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum PersonRelationshipType {
     Parent,
