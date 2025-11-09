@@ -16,6 +16,7 @@ pub mod query;
 pub mod vector;
 pub mod error;
 pub mod config;
+pub mod person_repository;
 
 pub use backend::PostgresBackend;
 pub use connection::ConnectionPool;
@@ -23,6 +24,7 @@ pub use transaction::PostgresTransaction;
 pub use event_sourced_wrapper::EventSourcedTransaction;
 pub use error::{PostgresError, PostgresResult};
 pub use config::PostgresConfig;
+pub use person_repository::{PersonRepository, PostgresPersonRepository, PersonWithData};
 
 /// Factory for creating PostgreSQL backends
 pub struct PostgresBackendFactory;
