@@ -59,5 +59,5 @@ pub mod prelude {
     pub use crate::proof_statement::{ProofStatement, ProofType, ProofSection, GPSElement, ConflictDescription, ProofAudience};
     pub use crate::analysis_report::{AnalysisReport, AnalysisMethod, AnalysisReportItem, EvidenceType, Correlation, Pattern, Anomaly};
     pub use crate::layer3::{Workspace, MethodologyConfig, WorkspaceId, MethodologyConfigId};
-    pub use crate::person::{Person, PersonBuilder, Sex, PersonConfidence, GenealogyDate, DateCertainty};
+    pub use crate::person::{Person, PersonBuilder, Sex, PersonConfidence, GenealogyDate, DateCertainty, VariantName, VariantNameBuilder, VariantNameType, PersonRelationship, PersonRelationshipBuilder, PersonRelationshipType, SourcePerson, SourcePersonBuilder, PersonMerge, PersonMergeBuilder};
 }
